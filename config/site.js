@@ -5,6 +5,12 @@ export const siteConfig = {
   tagline: "Independent Tirupati pilgrimage travel assistance",
   email: "connectmytours@gmail.com",
   enquiryRecipientEmail: "connectmytours@gmail.com",
+  // Resend sender identity for enquiry notifications (app/api/enquiry/route.js).
+  // enquirySenderEmail must be on a domain verified in the Resend dashboard —
+  // https://resend.com/domains — otherwise sends will fail. "onboarding@resend.dev"
+  // works out of the box for local testing but only delivers to the Resend account owner's email.
+  enquirySenderName: "Connect My Tours Website",
+  enquirySenderEmail: "onboarding@resend.dev",
   phone: "+91-99947-51079",
   phoneDisplay: "+91 99947 51079",
   whatsapp: "919994751079",

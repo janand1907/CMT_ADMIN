@@ -1,8 +1,6 @@
 import { Roboto, DM_Sans } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import PromoPopup from "@/components/enquiry/PromoPopup";
+import SiteChrome from "@/components/layout/SiteChrome";
 import { pageMetadata, travelAgencySchema, JsonLd } from "@/lib/seo";
 
 const roboto = Roboto({
@@ -39,10 +37,7 @@ export default function RootLayout({ children }) {
         >
           Skip to main content
         </a>
-        <Navbar />
-        <main id="main-content">{children}</main>
-        <Footer />
-        <PromoPopup />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );

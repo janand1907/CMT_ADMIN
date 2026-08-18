@@ -1,0 +1,75 @@
+export const NAV_SECTIONS = [
+  {
+    label: "Overview",
+    items: [{ href: "/admin/dashboard", label: "Dashboard", permission: null }],
+  },
+  {
+    label: "CRM",
+    items: [
+      { href: "/admin/crm/leads", label: "Leads", permission: ["view_leads_own", "view_leads_all"] },
+      {
+        href: "/admin/crm/quotations",
+        label: "Quotations",
+        permission: ["view_quotations_own", "view_quotations_all"],
+      },
+      { href: "/admin/crm/customers", label: "Customers", permission: "manage_customers" },
+      { href: "/admin/crm/followups", label: "Follow-ups", permission: "manage_followups" },
+      { href: "/admin/crm/tasks", label: "Tasks", permission: "manage_tasks" },
+      { href: "/admin/crm/activity", label: "Activity", permission: ["view_leads_own", "view_leads_all"] },
+      { href: "/admin/crm/tags", label: "Tags & Sources", permission: "manage_lead_metadata" },
+    ],
+  },
+  {
+    label: "Inventory",
+    items: [
+      {
+        href: "/admin/inventory/destinations",
+        label: "Destinations",
+        permission: ["view_inventory", "manage_packages"],
+      },
+      {
+        href: "/admin/inventory/categories",
+        label: "Categories",
+        permission: ["view_inventory", "manage_packages"],
+      },
+      {
+        href: "/admin/inventory/packages",
+        label: "Packages",
+        permission: ["view_inventory", "manage_packages"],
+      },
+      {
+        href: "/admin/inventory/media",
+        label: "Media Library",
+        permission: ["view_inventory", "manage_media", "manage_packages"],
+      },
+    ],
+  },
+  {
+    label: "Account",
+    items: [{ href: "/admin/security", label: "Security", permission: null }],
+  },
+];
+
+export function requiredPermissionKeys(sections) {
+  const keys = new Set();
+  sections.forEach((section) =>
+    section.items.forEach((item) => {
+      if (!item.permission) return;
+      (Array.isArray(item.permission) ? item.permission : [item.permission]).forEach((k) => keys.add(k));
+    })
+  );
+  return Array.from(keys);
+}
+
+export function filterNavSections(sections, perms) {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (!item.permission) return true;
+        const keys = Array.isArray(item.permission) ? item.permission : [item.permission];
+        return keys.some((k) => perms[k]);
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
+}

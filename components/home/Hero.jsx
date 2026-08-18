@@ -201,7 +201,7 @@ export default function Hero() {
             </div>
           </div>
 
-          <div className="mt-2 flex flex-wrap gap-2 sm:mt-8 sm:gap-4">
+          <div className="mt-2 inline-flex p-3 rounded-lg flex-wrap gap-2 sm:mt-8 sm:gap-4 bg-black/50">
             {topFeatures.map((feature, index) => (
               <div
                 key={feature.label}
@@ -214,7 +214,7 @@ export default function Hero() {
                 >
                   <feature.icon className="h-[40%] w-[40%]" />
                 </span>
-                <span className="text-[5px] font-bold uppercase leading-tight text-primary-900 sm:text-[9px] lg:text-xs">
+                <span className="text-[5px] font-bold uppercase leading-tight text-white sm:text-[9px] lg:text-xs">
                   {feature.label}
                 </span>
               </div>
@@ -265,7 +265,11 @@ export default function Hero() {
             </div>
             <div className="flex items-center justify-center gap-1.5 sm:gap-3">
               <a
-                href={`https://wa.me/${siteConfig.whatsapp}?text=${encodeURIComponent(siteConfig.whatsappDefaultMessage)}`}
+                href={`https://wa.me/${
+                  siteConfig.whatsapp
+                }?text=${encodeURIComponent(
+                  siteConfig.whatsappDefaultMessage
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 rounded-full bg-secondary-500 px-2.5 py-1 text-[5px] font-semibold text-white shadow-soft transition hover:bg-secondary-600 sm:gap-2 sm:px-6 sm:py-2.5 sm:text-xs"
@@ -309,7 +313,9 @@ export default function Hero() {
           <div className="rounded-2xl bg-white p-4 shadow-modal sm:p-6">
             <h1 className="font-display text-2xl font-extrabold uppercase leading-tight text-primary-900 sm:text-3xl">
               <span className="block">South India</span>
-              <span className="block text-secondary-500">Pilgrim Tour Packages</span>
+              <span className="block text-secondary-500">
+                Pilgrim Tour Packages
+              </span>
             </h1>
 
             <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-primary-900 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white sm:text-sm">
@@ -327,7 +333,10 @@ export default function Hero() {
 
             <div className="mt-4 grid grid-cols-5 gap-2">
               {topFeatures.map((feature, index) => (
-                <div key={feature.label} className="flex flex-col items-center gap-1.5 text-center">
+                <div
+                  key={feature.label}
+                  className="flex flex-col items-center gap-1.5 text-center"
+                >
                   <span
                     className={`flex h-9 w-9 items-center justify-center rounded-full text-white shadow-soft sm:h-11 sm:w-11 ${
                       index % 2 === 0 ? "bg-primary-800" : "bg-secondary-500"
@@ -350,7 +359,9 @@ export default function Hero() {
                   </span>
                   <span className="flex flex-col text-[11px] font-bold uppercase leading-tight text-white">
                     <span>{feature.line1}</span>
-                    <span className="font-medium text-white/75">{feature.line2}</span>
+                    <span className="font-medium text-white/75">
+                      {feature.line2}
+                    </span>
                   </span>
                 </div>
               ))}
@@ -359,7 +370,9 @@ export default function Hero() {
             <div className="mt-4 flex flex-col items-stretch gap-3 rounded-xl border border-primary-100 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-display text-sm font-extrabold uppercase text-primary-900">
-                  Start Your <span className="text-secondary-500">Spiritual Journey</span> Today!
+                  Start Your{" "}
+                  <span className="text-secondary-500">Spiritual Journey</span>{" "}
+                  Today!
                 </p>
                 <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-primary-900">
                   <UsersIcon className="h-4 w-4 shrink-0" />
@@ -367,7 +380,11 @@ export default function Hero() {
                 </p>
               </div>
               <a
-                href={`https://wa.me/${siteConfig.whatsapp}?text=${encodeURIComponent(siteConfig.whatsappDefaultMessage)}`}
+                href={`https://wa.me/${
+                  siteConfig.whatsapp
+                }?text=${encodeURIComponent(
+                  siteConfig.whatsappDefaultMessage
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-secondary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-secondary-600 sm:w-auto"
