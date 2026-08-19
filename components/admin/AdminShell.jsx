@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function NavLink({ href, label, onNavigate }) {
   const pathname = usePathname();
@@ -40,6 +40,15 @@ function SidebarContent({ sections, onNavigate }) {
 
 export function AdminShell({ sections, userEmail, userRole, logoutAction, children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">

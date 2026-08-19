@@ -20,7 +20,7 @@ export default async function NewLeadPage() {
 
   const [{ data: sources }, { data: staff }] = await Promise.all([
     supabase.from("lead_sources").select("id, name").order("name"),
-    supabase.from("users").select("id, full_name").order("full_name"),
+    supabase.from("users").select("id, full_name, email").order("full_name"),
   ]);
 
   return (

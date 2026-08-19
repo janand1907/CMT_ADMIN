@@ -83,7 +83,7 @@ export default async function LeadDetailPage({ params }) {
       .order("created_at", { ascending: false }),
     supabase.from("lead_tags").select("id, name, color").order("name"),
     supabase.from("lead_tag_assignments").select("tag_id").eq("lead_id", lead.id),
-    supabase.from("users").select("id, full_name").order("full_name"),
+    supabase.from("users").select("id, full_name, email").order("full_name"),
     (perms.view_quotations_own || perms.view_quotations_all)
       ? supabase
           .from("quotations")

@@ -5,7 +5,6 @@ import { createCampaign, sendCampaign, deactivateCampaign } from "./actions";
 import { Button } from "@/components/admin/ui/Button";
 import { Alert } from "@/components/admin/ui/Alert";
 import { Badge } from "@/components/admin/ui/Badge";
-import Link from "next/link";
 
 function CreateForm({ templates, onCreated }) {
   const [name, setName] = useState("");
@@ -155,11 +154,7 @@ export default function CampaignsClient({ campaigns, templates, perms, onUpdate 
             <tbody className="divide-y divide-gray-100">
               {campaigns.map((c) => (
                 <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2.5 font-medium text-gray-900">
-                    <Link href={`/admin/marketing/campaigns/${c.id}`} className="hover:underline">
-                      {c.name}
-                    </Link>
-                  </td>
+                  <td className="px-4 py-2.5 font-medium text-gray-900">{c.name}</td>
                   <td className="px-4 py-2.5 text-gray-600">{c.template?.name || "-"}</td>
                   <td className="px-4 py-2.5">
                     <Badge tone={statusTones[c.status] || "gray"}>{c.status}</Badge>

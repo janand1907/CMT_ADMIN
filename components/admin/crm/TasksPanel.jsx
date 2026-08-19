@@ -140,7 +140,7 @@ export function TasksPanel({ leadId, tasks, staff, canManage }) {
               <option value="">Unassigned</option>
               {staff.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.full_name}
+                  {s.full_name || s.email}
                 </option>
               ))}
             </Select>

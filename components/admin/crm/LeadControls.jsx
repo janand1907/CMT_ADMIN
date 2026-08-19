@@ -82,14 +82,14 @@ export function LeadControls({ leadId, status, priority, assignedTo, staff, canE
                 <option value="">Unassigned</option>
                 {staff.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.full_name}
+                    {s.full_name || s.email}
                   </option>
                 ))}
               </>
             ) : (
               <>
                 <option value="">Unassigned</option>
-                {me && <option value={me.id}>{me.full_name} (me)</option>}
+                {me && <option value={me.id}>{me.full_name || me.email} (me)</option>}
               </>
             )
           }

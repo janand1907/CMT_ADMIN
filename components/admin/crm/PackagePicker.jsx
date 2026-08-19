@@ -63,8 +63,9 @@ export function PackagePicker({ open, onClose, onSelect, title = "Select a Packa
 
   return (
     <Dialog open={open} onClose={onClose} title={title} size="lg">
-      <form
-        onSubmit={(e) => {
+      <div
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
           e.preventDefault();
           runSearch(q);
         }}
@@ -78,7 +79,7 @@ export function PackagePicker({ open, onClose, onSelect, title = "Select a Packa
             onChange={(e) => setQ(e.target.value)}
           />
         </Field>
-      </form>
+      </div>
 
       {loading ? (
         <SkeletonRows rows={5} />
