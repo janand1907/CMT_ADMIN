@@ -1,5 +1,7 @@
 import { sendEnquiryEmail } from "@/lib/email/enquiry-email";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import { createAnonClient } from "@/lib/supabase/anon";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -99,6 +101,25 @@ export async function POST(request) {
     source,
     ip,
     userAgent: request.headers.get("user-agent") || "",
+  });
+
+  // Same best-effort contract as the email above — WhatsApp uses the service-role
+  // admin client because this route has no staff session for RLS to key off.
+  const adminClient = createAdminClient();
+
+  // submit_enquiry() only returns (enquiry_number, lead_id) — customer_id isn't part of
+  // its return shape — but whatsapp_messages.customer_id is NOT NULL, so it has to be
+  // looked up here rather than left out of the sendWhatsAppMessage() call below.
+  const { data: leadRow } = await adminClient.from("leads").select("customer_id").eq("id", enquiry.lead_id).maybeSingle();
+
+  await sendWhatsAppMessage({
+    supabase: adminClient,
+    leadId: enquiry.lead_id,
+    customerId: leadRow?.customer_id,
+    toPhone: phone,
+    purpose: "enquiry_confirmation",
+    messageType: "enquiry_confirmation",
+    params: [name, enquiry.enquiry_number],
   });
 
   return Response.json({ ok: true, enquiryNumber: enquiry.enquiry_number });

@@ -7,13 +7,17 @@ import { Card, CardHeader } from "@/components/admin/ui/Card";
 import { Badge } from "@/components/admin/ui/Badge";
 import { Tabs } from "@/components/admin/ui/Tabs";
 import { Timeline, TimelineItem } from "@/components/admin/ui/Timeline";
+import { Table, THead, Th, TBody, Tr, Td, EmptyRow } from "@/components/admin/ui/Table";
 import { ErrorState, EmptyState } from "@/components/admin/ui/EmptyState";
+import { LinkButton } from "@/components/admin/ui/Button";
 import { LeadControls } from "@/components/admin/crm/LeadControls";
 import { NotesPanel } from "@/components/admin/crm/NotesPanel";
 import { TagsPanel } from "@/components/admin/crm/TagsPanel";
 import { FollowupsPanel } from "@/components/admin/crm/FollowupsPanel";
 import { TasksPanel } from "@/components/admin/crm/TasksPanel";
+import { formatCurrency } from "@/lib/inventory/constants";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_TONES, PRIORITY_LABELS, PRIORITY_TONES, formatDate, formatDateOnly } from "@/lib/crm/constants";
+import { QUOTATION_STATUS_LABELS, QUOTATION_STATUS_TONES } from "@/lib/crm/quotationConstants";
 
 export default async function LeadDetailPage({ params }) {
   const supabase = createClient();
@@ -24,6 +28,9 @@ export default async function LeadDetailPage({ params }) {
     "assign_leads",
     "manage_followups",
     "manage_tasks",
+    "create_quotations",
+    "view_quotations_own",
+    "view_quotations_all",
   ]);
 
   if (!perms.view_leads_own && !perms.view_leads_all) {
@@ -64,6 +71,7 @@ export default async function LeadDetailPage({ params }) {
     { data: allTags },
     { data: assignedTags },
     { data: staff },
+    { data: quotations },
   ] = await Promise.all([
     supabase.from("lead_notes").select("id, note, created_at, author_id, author:users(full_name)").eq("lead_id", lead.id).order("created_at", { ascending: false }),
     supabase.from("lead_activities").select("id, action, description, created_at, actor:users(full_name)").eq("lead_id", lead.id).order("created_at", { ascending: false }),
@@ -76,11 +84,54 @@ export default async function LeadDetailPage({ params }) {
     supabase.from("lead_tags").select("id, name, color").order("name"),
     supabase.from("lead_tag_assignments").select("tag_id").eq("lead_id", lead.id),
     supabase.from("users").select("id, full_name").order("full_name"),
+    (perms.view_quotations_own || perms.view_quotations_all)
+      ? supabase
+          .from("quotations")
+          .select("id, quotation_number, status, total_amount, currency, created_at")
+          .eq("lead_id", lead.id)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
   ]);
 
   const assignedTagIds = (assignedTags || []).map((t) => t.tag_id);
 
   const tabs = [
+    {
+      key: "quotations",
+      label: `Quotations (${quotations?.length || 0})`,
+      content:
+        quotations && quotations.length > 0 ? (
+          <Table>
+            <THead>
+              <Th>Quotation #</Th>
+              <Th>Status</Th>
+              <Th>Total</Th>
+              <Th>Created</Th>
+            </THead>
+            <TBody>
+              {quotations.map((q) => (
+                <Tr key={q.id}>
+                  <Td>
+                    <Link href={`/admin/crm/quotations/${q.id}`} className="font-medium text-primary-700 hover:underline">
+                      {q.quotation_number}
+                    </Link>
+                  </Td>
+                  <Td>
+                    <Badge tone={QUOTATION_STATUS_TONES[q.status]}>{QUOTATION_STATUS_LABELS[q.status]}</Badge>
+                  </Td>
+                  <Td>{formatCurrency(q.total_amount, q.currency)}</Td>
+                  <Td>{formatDateOnly(q.created_at)}</Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
+        ) : (
+          <EmptyState
+            title="No quotations yet"
+            description={perms.create_quotations ? "Create one from the button above." : undefined}
+          />
+        ),
+    },
     {
       key: "notes",
       label: `Notes (${notes?.length || 0})`,
@@ -134,6 +185,11 @@ export default async function LeadDetailPage({ params }) {
       <PageHeader
         title={lead.enquiry_number}
         breadcrumbs={<Breadcrumbs items={[{ label: "Leads", href: "/admin/crm/leads" }, { label: lead.enquiry_number }]} />}
+        action={
+          perms.create_quotations && (
+            <LinkButton href={`/admin/crm/quotations/new?leadId=${lead.id}`}>New Quotation</LinkButton>
+          )
+        }
         description={
           <span className="flex items-center gap-2">
             <Badge tone={LEAD_STATUS_TONES[lead.status]}>{LEAD_STATUS_LABELS[lead.status]}</Badge>

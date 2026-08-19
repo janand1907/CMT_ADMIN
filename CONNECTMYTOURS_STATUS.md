@@ -1,6 +1,6 @@
 # ConnectMyTours — Implementation Status & QA Governance
 
-Updated: 2026-08-18 (Phase 3 database layer deployed — UI/application layer and browser QA not started)
+Updated: 2026-08-19 (Phase 4 implementation completed and bug-fixed — QA INCOMPLETE, browser QA not started)
 
 Scope for every phase below is transcribed from `CONNECTMYTOURS_MASTER_PLAN.md` only — no
 feature has been added or expanded beyond what that document states. Where the master plan
@@ -475,38 +475,37 @@ quotation status, revision history, WhatsApp quotation sending.
 
 **Acceptance requirements:** Full QA governance framework above.
 
-**Current status: IN PROGRESS**
+**Current status: CLOSED**
 
-Database layer deployed and verified this session (evidence-based):
-- Migration `supabase/migrations/20260818090000_phase3_quotations.sql` pushed to remote
-  (`connectmytours`) via `supabase db push --linked`.
-- `supabase migration list --linked` confirms local == remote for all 7 migrations
-  (`20260813090016` through `20260818090000`), no unexpected migrations applied.
-- Verified directly against remote (`supabase db query --linked`): all 4 tables present
-  (`quotations`, `quotation_items`, `quotation_revisions`, `quotation_messages`); all 8
-  functions present (`create_quotation`, `create_quotation_revision`,
-  `get_quotation_by_token`, `sync_quotation_total`, `recalc_quotation_subtotal`,
-  `enforce_quotation_status_transition`, `log_quotation_created`,
-  `log_quotation_status_change`); all 7 triggers present; 5 new permissions
+Database layer deployed and verified (evidence-based):
+- Migrations `20260818090000_phase3_quotations.sql`, `20260818110000_phase3_public_quotation_response.sql`,
+  `20260818150000_phase3_revert_public_quotation_response.sql` pushed to remote (`connectmytours`).
+- `supabase migration list` confirms local == remote for all 9 migrations
+  (`20260813090016` through `20260818150000`), no drift.
+- Verified directly against remote: all 4 tables present (`quotations`, `quotation_items`,
+  `quotation_revisions`, `quotation_messages`); functions/triggers present
+  (`create_quotation`, `create_quotation_revision`, `get_quotation_by_token`,
+  `sync_quotation_total`, `recalc_quotation_subtotal`, `enforce_quotation_status_transition`,
+  `log_quotation_created`, `log_quotation_status_change`); 5 permissions
   (`view_quotations_own`, `view_quotations_all`, `create_quotations`, `edit_quotations`,
-  `send_quotations`) present with correct role grants (Admin/Manager gets all 5 view-all
-  variant; Sales Staff gets the view-own variant + create/edit/send; Super Admin auto-granted
-  all 5 via the existing Phase 0 `grant_new_permission_to_super_admin` trigger; Content Manager
-  correctly has none); all 9 RLS policies present across the 4 tables, correctly with no
-  DELETE policy on `quotations` (matches the leads/customers no-delete precedent).
-- Phase 0/1/2 regression: `roles` (4), `permissions` (23 = 18 prior + 5 new), `leads` (2),
-  `customers` (3), `packages` (3), `package_pricing` (1), `media` (0), and the 8 pre-existing
-  RLS policies on `leads`/`customers`/`packages` all confirmed unchanged and queryable.
-- `npm run lint` — clean (only pre-existing Phase 2 `<img>`-element warnings, no new issues).
-  `npm run build` — compiles successfully, all existing routes resolve (no Phase 3 routes exist
-  yet, as expected — this turn was database-layer only, no UI/server actions were built).
+  `send_quotations`) present with correct role grants; RLS policies present across all 4
+  tables, no DELETE policy on `quotations` (matches leads/customers no-delete precedent);
+  `quotation_items_write_managed` policy correctly restricts item mutation to `status='draft'`.
+- Business decision: the anon-callable `respond_to_quotation()` RPC (customer-side public
+  accept/reject) was added then deliberately removed via the revert migration. Accept/Reject
+  is a manual Admin/Manager action on the quotation detail page only — this is intentionally
+  NOT part of Phase 3's final scope, not a missing feature.
+- `npm run lint` / `npm run build` — clean, all Phase 3 routes compile
+  (`/admin/crm/quotations`, `/admin/crm/quotations/new`, `/admin/crm/quotations/[id]`,
+  `/quote/[token]`).
 
-**No UI, server actions, or admin routes have been built yet.** No real browser acceptance
-testing has occurred for Phase 3. Per Permanent QA Governance Rule 1 (Phase Closure Rule),
-Phase 3 cannot be marked CLOSED until the UI/application layer is built and every applicable
-layer — including real browser acceptance testing — passes.
-
-**Browser QA: NOT STARTED**
+**Browser QA: VERIFIED** (manually performed by user in a real browser). Confirmed working:
+quotation creation, lead selection, package picker/selection, pricing, item-level discounts,
+quotation-level discounts, totals, quotation persistence, revision creation/history, messages/
+history, quotation search, quotation filters, navigation back/forward, refresh/hard-refresh
+persistence, environment-aware public quotation URL generation, public quotation page
+rendering, admin-side quotation status controls, and the items-table UI after a min-width
+layout fix.
 
 ---
 
@@ -515,31 +514,102 @@ layer — including real browser acceptance testing — passes.
 **Note on scope:** the master plan has no dedicated narrative section for bookings — the only
 reference is the `bookings` table entry in §9 Database Architecture, plus a passing mention of
 future "online booking, payments, invoices" in §17 Final Product Vision (explicitly described
-there as a later, not-yet-scoped extension). Scope below is limited to what §9 actually states;
-nothing has been added beyond it.
+there as a later, not-yet-scoped extension). Scope below is limited to what §9 actually states,
+plus the minimal fields/lifecycle needed for a booking to exist as a row derived from an
+accepted quotation; nothing beyond that has been added.
 
-**Purpose:** Persist confirmed bookings derived from accepted quotations (inferred minimally
-from the table's presence between the Quotations and WhatsApp Automation sections).
+**Purpose:** Persist confirmed bookings derived from accepted quotations.
 
-**Exact features:** Not specified beyond the table's existence. To be scoped before
-implementation begins — this is a gap in the master plan, not an implementation gap.
+**Exact features (as implemented):**
+- One booking created per accepted quotation via `create_booking()` (accepted-status guard +
+  one-booking-per-quotation guard, both application-layer and a unique constraint on
+  `quotation_id`)
+- Fields: booking number, quotation, lead, customer, travel start/end date, total amount,
+  amount paid, generated balance amount, payment status (`pending`/`partial`/`paid`/`refunded`),
+  booking status (`pending`/`confirmed`/`completed`/`cancelled`), notes
+- Forward-only booking status transitions (`pending → confirmed/cancelled`,
+  `confirmed → completed/cancelled`; `completed`/`cancelled` terminal), enforced by
+  `enforce_booking_status_transition()`
+- First transition to `confirmed` moves the parent lead to `status = 'confirmed'` (mirrors the
+  quotation-sent lead-status sync from Phase 3), never regressing a lead already in a
+  terminal/confirmed state
+- Booking creation, status changes, and payment changes each log a `lead_activities` row,
+  visible on the existing lead Activity tab
+- Bookings list (search by booking number/customer, filter by status, pagination) and detail
+  page (status control, payment form, travel/notes form) under `/admin/crm/bookings`
+- Lead detail page gained a Quotations tab; quotation detail page gained a Booking panel that
+  either links to the existing booking or shows `CreateBookingForm` when the quotation is
+  `accepted` and none exists yet
 
-**Database objects (master plan §9):** `bookings`
+**Database objects (evidence: `supabase/migrations/20260818170000_phase3_5_bookings.sql`,
+confirmed directly against remote):** table `bookings` (RLS enabled, indexes on `lead_id`,
+`customer_id`, `booking_status`, `created_at`); functions `create_booking`,
+`enforce_booking_status_transition`, `log_booking_created`, `log_booking_status_change`,
+`log_booking_payment_change`; triggers `set_bookings_updated_at`, `log_booking_created_trg`,
+`enforce_booking_status_transition_trg`, `log_booking_status_change_trg`,
+`log_booking_payment_change_trg`; RLS policies `bookings_select_scoped`,
+`bookings_insert_scoped`, `bookings_update_scoped` (no delete policy — same
+never-delete precedent as leads/customers/quotations); permissions `view_bookings_own`,
+`view_bookings_all`, `create_bookings`, `edit_bookings` granted to Admin/Manager (own+all) and
+Sales Staff (own only), matching the Phase 3 quotations grant shape; Content Manager gets none.
 
-**Admin routes:** Not specified in the master plan.
+**Admin routes:** `/admin/crm/bookings`, `/admin/crm/bookings/[id]` — both gated via
+`getPermissions` against `view_bookings_own`/`view_bookings_all`/`edit_bookings`, matching this
+migration's permission set exactly.
 
-**Server actions / API:** None yet.
+**Server actions / API:** `app/admin/(protected)/crm/bookings/[id]/actions.js`
+(`updateBookingStatus`, `updateBookingPayment`, `updateBookingDetails`);
+`createBookingFromQuotation` added to
+`app/admin/(protected)/crm/quotations/[id]/actions.js`.
 
-**External integrations:** None specified.
+**External integrations:** None (no payment gateway — `payment_status`/`amount_paid` are bare
+state tracking, no collection integration, by explicit scope decision recorded in the
+migration's header comment).
 
-**Dependencies on previous phases:** Phase 0; Phase 1 (leads); Phase 3 (quotations become
-bookings).
+**Dependencies on previous phases:** Phase 0 (`has_permission`, `set_updated_at`,
+`generate_business_id`); Phase 1 (leads, customers, `lead_activities`); Phase 3 (quotations).
 
-**Acceptance requirements:** Full QA governance framework above, once scope is defined.
+**Acceptance requirements:** Full QA governance framework above.
 
-**Current status: NOT STARTED**
-Evidence: no booking code, routes, or database tables exist. (Previously implemented and torn
-down per the same teardown migration.)
+**Current status: CLOSED**
+
+Evidence this session:
+- Migration `20260818170000_phase3_5_bookings.sql` pushed to remote (`connectmytours`).
+  `npx supabase migration list --linked` confirms local == remote for all 10 migrations
+  (`20260813090016` through `20260818170000`), no drift.
+- Verified directly against remote (`supabase db query --linked`): `bookings` table present with
+  `relrowsecurity = true`; exactly the 3 policies defined in the migration
+  (`bookings_select_scoped`, `bookings_insert_scoped`, `bookings_update_scoped`); all 5 functions
+  present (`create_booking`, `enforce_booking_status_transition`, `log_booking_created`,
+  `log_booking_status_change`, `log_booking_payment_change`); all 4 permissions present with the
+  correct Admin/Manager and Sales Staff role grants described above.
+- `npm run lint` — clean (only pre-existing, unrelated `next/image` warnings in Phase 2
+  inventory components). `npm run build` — all routes compile, including
+  `/admin/crm/bookings` and `/admin/crm/bookings/[id]`.
+- Source cross-checked: `lib/crm/bookingConstants.js` status/transition vocabulary matches the
+  migration's check constraints and `enforce_booking_status_transition()` exactly; server
+  actions rely on the database trigger/RLS/check-constraint layer for validation (transition
+  legality, `edit_bookings` grant, over-payment) rather than duplicating those checks
+  client-side, matching the Phase 3 quotations pattern.
+
+**Real browser acceptance (user-confirmed 2026-08-18):** Booking creation from an accepted
+quotation; booking number generation; lead/customer/quotation relationships on the booking;
+booking status lifecycle (`pending → confirmed`, `confirmed → completed`,
+`confirmed → cancelled`); payment amount entry; balance-amount calculation; over-payment
+rejection; booking detail editing; refresh persistence; booking list; booking search; booking
+status filters; navigation. This satisfies Rule 1 (Phase Closure Rule), Rule 4 (Real Browser
+Acceptance), and Rule 9 (No-Assumption Rule) for every workflow enumerated in this phase's
+"Exact features" section above. **Phase 3.5 — Booking Foundation is CLOSED.**
+
+**Deferred future enhancement (explicit user decision, 2026-08-18, not a defect):**
+`payment_status` is a manually-selected field independent of `amount_paid` (see
+`updateBookingPayment` in `app/admin/(protected)/crm/bookings/[id]/actions.js`) — it is not
+automatically derived from the paid/total ratio (e.g. `amount_paid = total_amount` does not
+auto-set `payment_status = 'paid'`). Automatic payment-status derivation from `amount_paid`,
+along with a future refund workflow and stronger payment-status/amount consistency rules, is
+intentionally out of scope for Phase 3.5 and deferred to a later enhancement — consistent with
+this phase's original scope note that `payment_status`/`amount_paid` are bare state tracking
+with no payment gateway/collection integration.
 
 ---
 
@@ -576,11 +646,161 @@ messages).
 
 **Acceptance requirements:** Full QA governance framework above.
 
-**Current status: NOT STARTED**
-Evidence: no WhatsApp automation code, routes, or database tables exist. (Previously
-implemented and torn down per the same teardown migration, which also dropped
-`whatsapp_consent_events`, `apply_whatsapp_consent_event`, `stop_lead_automation`, and related
-trigger functions.)
+**Current status: IN PROGRESS — QA INCOMPLETE**
+
+**Correction to this file's prior text (this session):** the previous revision of this section
+claimed follow-up automation, the Templates/Campaigns/Automation/Settings admin UI, and
+stop/pause/resume controls were "not yet built." That was stale — a prior session had already
+built all of it but left it uncommitted (`git status` showed it as untracked). This session
+re-verified the actual on-disk state directly (not from memory or this file) before writing
+anything below, per the project's own No-Assumption Rule.
+
+**Database objects deployed (evidence: `supabase/migrations/20260818190000_phase4_whatsapp_automation.sql`,
+`npx supabase migration list` re-run this session):** local == remote for all 11 migrations
+(`20260813090016` through `20260818190000`), no drift. Tables: `whatsapp_templates`,
+`automation_rules`, `lead_followup_automation_state` (not `lead_automation_state` — corrected
+name), `whatsapp_consent_events`, `campaigns`, `whatsapp_messages`, `campaign_recipients`, plus
+a `customers.whatsapp_opt_out` column. Functions: `apply_whatsapp_consent_event`,
+`stop_lead_automation`, `stop_automation_on_lead_status`, `stop_automation_on_booking_status`,
+`log_whatsapp_message_activity`, `get_eligible_followup_leads`, `claim_followup_send`. RLS
+enabled on all 7 new/altered tables; 5 permissions (`view_whatsapp_messages_own/_all`,
+`manage_whatsapp_templates`, `manage_whatsapp_automation`, `manage_whatsapp_campaigns`) with
+correct Admin/Manager/Sales Staff/Content Manager grants. Seed data: 4 templates
+(`enquiry_confirmation`, `quotation_ready`, `followup_morning`, `followup_evening`) with
+placeholder `provider_template_name`s pending real Meta approval.
+
+**Built and now verified on disk (all four Phase 4 vertical slices, master plan §6):**
+- **Enquiry confirmation** — `app/api/enquiry/route.js` calls `sendWhatsAppMessage()`
+  best-effort via the service-role admin client after `submit_enquiry` persists the lead; a
+  WhatsApp failure never fails or rolls back the enquiry submission, matching the existing
+  `sendEnquiryEmail` contract.
+- **Quotation message** — `sendQuotationWhatsApp()` in
+  `app/admin/(protected)/crm/quotations/[id]/actions.js`, triggered by a "Send via WhatsApp"
+  button in `QuotationStatusControl.jsx` (gated on `send_quotations`). Logs a
+  `quotation_messages` row and flips `draft → sent` only on a confirmed provider send.
+- **Follow-up automation** — `app/api/cron/whatsapp-followup/route.js`: `CRON_SECRET`-gated
+  `GET` route, bucketed 15-minute slot matching against `automation_rules.morning_time`/
+  `evening_time`, atomic claim-then-send via `get_eligible_followup_leads()` +
+  `claim_followup_send()` (a provider failure after a successful claim is never a duplicate —
+  it's simply one fewer message that lead gets). Admin UI at `/admin/marketing/automation`
+  (`AutomationRuleForm.jsx`, `AutomationStateTable.jsx`) — enable/disable, morning/evening
+  time, follow-up duration, max messages, eligible lead statuses, and a per-lead
+  active/paused/stopped/completed control gated by the DB's own legal-transition trigger.
+  Documented (real) trigger mechanism is Hostinger Cron, per the crontab line shown on
+  `/admin/settings/whatsapp` — not Vercel Cron (a stale code comment claiming otherwise was
+  corrected this session; no `vercel.json` exists or is needed).
+- **Templates** — `/admin/marketing/templates`: list/create/edit, `{{1}},{{2}},...`
+  placeholder-sequence validation, provider-name uniqueness check, soft-delete only
+  (deactivate, never a real `DELETE`).
+- **Campaigns** — `/admin/marketing/campaigns`: create → recipient selection (by lead-status
+  filter) → send, with per-recipient status (`sent`/`failed`/`skipped` with a skip reason for
+  opt-out/no-phone) and honest campaign-level status (`completed`/`partially_failed`/`failed`
+  — never reported as fully successful when some recipients failed). Optional `scheduled_at`
+  is now actually acted on (see fixes below).
+- **Stop/pause/resume + stop conditions** — `stop_lead_automation()` plus two DB triggers
+  (`stop_automation_on_lead_status`, `stop_automation_on_booking_status`) stop a lead's
+  automation state when the lead is marked not-interested/lost/cancelled, or a booking is
+  confirmed, matching master plan §6's stop-condition list exactly; admin can also
+  manually pause/stop per lead via `AutomationStateTable.jsx`.
+- **Consent/opt-out** — `app/api/webhooks/whatsapp/route.js` `POST` handler detects
+  `stop`/`unsubscribe`/`opt out` in an inbound message body and calls
+  `apply_whatsapp_consent_event()`, which flips `customers.whatsapp_opt_out` and stops
+  automation for every affected lead. Opt-out is now enforced centrally in
+  `sendWhatsAppMessage()` (see fixes below), not just at the campaign call site.
+- **Webhook** — `app/api/webhooks/whatsapp/route.js`: `GET` handles Meta's verification
+  handshake; `POST` verifies the `x-hub-signature-256` HMAC (constant-time compare, rejects if
+  `WHATSAPP_APP_SECRET` unset), updates `whatsapp_messages` delivery/read/failed status by
+  `provider_message_id`, and records inbound messages.
+
+**Real bugs found and fixed this session** (found by reading every file directly, not by
+trusting that "it compiles" meant "it works" — none of these were caught by `npm run build`):
+1. `CampaignsClient.jsx` imported `{ Link }` from `next/link` (named import) instead of the
+   correct default import — the only file in the entire codebase doing this; would have thrown
+   a rendering error the moment the Campaigns page loaded.
+2. `AutomationRuleForm.jsx` and `AutomationStateTable.jsx` both imported their server actions
+   from `"../actions"` instead of `"./actions"`, even though `actions.js` sits in the same
+   `automation/` directory — `npm run build` failed outright on this until fixed.
+3. `automation/page.js` passed a raw HTML string (`` `...<span className="font-medium">...` ``)
+   into `CardHeader`'s `description` prop, which renders as plain text — would have shown
+   literal `<span>` markup on the page instead of styled text.
+4. `updateAutomationRules()` never returned `success: true` on a successful save, so the
+   "Settings saved" banner the form was built to show could never appear — a silent success
+   with no user-visible confirmation, the exact failure mode this project's QA rules exist to
+   catch. Now explicitly returns `success: true`/`false`.
+5. `campaigns/page.js` aliased the templates join as `templates:` but `CampaignsClient.jsx`
+   read `c.template` (singular) — the Template column in the campaigns table would always have
+   shown "-". Query alias corrected to match.
+6. `messages/page.js` tried to scope "own vs all" visibility with
+   `.or("leads.assigned_to.eq...")` — a dotted embedded-table column inside `.or()`, a pattern
+   PostgREST does not support and no other page in this codebase uses. Removed entirely: the
+   `whatsapp_messages_select_scoped` RLS policy already enforces the identical own/all scoping
+   via a `leads.assigned_to` subquery, so the app-level filter was both broken and redundant.
+7. **`whatsapp_messages.customer_id` is `NOT NULL`, but `app/api/enquiry/route.js` never
+   passed `customerId` to `sendWhatsAppMessage()`** (and `submit_enquiry()`'s return shape
+   doesn't include one) — every enquiry-confirmation send's log-row insert would have failed
+   the NOT NULL constraint silently (logged to console, swallowed, never surfaced), meaning
+   message history for the entire confirmation flow was silently broken. This is a genuine
+   runtime bug `npm run build` cannot catch. Fixed by looking up the lead's `customer_id`
+   directly in the route (no Phase 1 migration/function changes needed).
+8. **No opt-out enforcement on quotation or enquiry-confirmation sends** — only campaign sends
+   checked `customers.whatsapp_opt_out`; follow-up automation excludes opted-out leads at the
+   DB eligibility-query level; but a staff-triggered quotation send had no check at all. Fixed
+   by enforcing the opt-out check centrally inside `sendWhatsAppMessage()` itself, so every
+   current and future call site is covered without needing to remember to duplicate the check.
+9. An unescaped apostrophe in `templates/page.js`'s access-denied text was a real
+   `react/no-unescaped-entities` **lint error** (not a warning) — fixed.
+
+**Also completed this session (genuine scope gaps, not new business rules):**
+- Scheduled campaigns: `campaigns.scheduled_at` was captured by the UI but nothing ever acted
+  on it — a campaign with a schedule just sat in `draft` forever. Extracted the campaign send
+  loop into a new shared `lib/whatsapp/campaigns.js` (`sendCampaignRecipients()`, used by both
+  the staff "Send" action and the cron sweep) and added a scheduled-campaign check to
+  `app/api/cron/whatsapp-followup/route.js` that sends any `draft` campaign whose
+  `scheduled_at` has arrived, on every cron hit, independent of the follow-up engine's
+  active/paused state.
+- Webhook inbound-message idempotency: a duplicate inbound event (Meta retries webhooks) would
+  hit the `whatsapp_messages_provider_message_id_key` unique index and fail the insert, but the
+  route never checked that insert's returned error — now explicitly distinguishes a duplicate
+  (`23505`, logged at info level, expected/harmless) from a real insert failure (logged as an
+  error).
+- `.env.example` updated with all 6 Phase 4 environment variables
+  (`WHATSAPP_CLOUD_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_API_VERSION`,
+  `WHATSAPP_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `CRON_SECRET`) — previously
+  undocumented for onboarding even though the app reads them directly from `process.env`.
+
+**Navigation:** `components/admin/navConfig.js`'s Marketing section
+(`/admin/marketing/automation`, `/admin/marketing/templates`, `/admin/marketing/campaigns`,
+`/admin/marketing/messages`) and Settings section (`/admin/settings/whatsapp`) were verified
+this session to have a real `page.js` on disk for every href — no dead links, no placeholder
+routes.
+
+**`npm run lint`** — clean after fixes (only the pre-existing, unrelated Phase 2 `next/image`
+warnings remain; zero Phase 4 errors or warnings). **`npm run build`** — clean after fixes, all
+Phase 4 routes compile: `/admin/marketing/{automation,templates,campaigns,messages}`,
+`/admin/settings/whatsapp`, `/api/cron/whatsapp-followup`, `/api/webhooks/whatsapp`,
+`/api/enquiry`.
+
+**Genuinely unresolved (not fixable without external input, not glossed over):**
+- Seeded `provider_template_name`s (`enquiry_confirmation`, `quotation_ready`,
+  `followup_morning`, `followup_evening`) are placeholders — real Meta-approved template names
+  are required once the WhatsApp Business Cloud API app is fully provisioned.
+- No `WHATSAPP_CLOUD_API_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID`/`WHATSAPP_APP_SECRET`/
+  `WHATSAPP_WEBHOOK_VERIFY_TOKEN`/`CRON_SECRET` are configured in this environment (by design —
+  the task instructions explicitly prohibit inventing or entering real Meta credentials here).
+  No real send-and-receive test, no real webhook delivery, and no real cron firing have been
+  performed against a live WhatsApp number. Per Rule 9 (No-Assumption Rule), none of this is
+  marked verified until that real test happens against real staging credentials.
+- Hostinger Cron itself is not configured anywhere reachable from this repository — the
+  crontab line is documented on `/admin/settings/whatsapp`, but nothing in this codebase can
+  confirm a real Hostinger cron job has been created to call it on staging.
+- No real browser acceptance testing has been performed for any Phase 4 admin UI
+  (Templates/Automation/Campaigns/Messages/Settings) in this session.
+
+**QA status:** Phase 4 remains **QA INCOMPLETE**. Lint/build passing, migrations matching
+remote, and this session's source-level bug fixes are evidence that the code is now internally
+consistent and free of the specific defects found — they are not evidence of a working feature
+against a live WhatsApp number, per Rule 1 (Phase Closure Rule) and Rule 4 (Real Browser
+Acceptance). **Browser QA: NOT STARTED.**
 
 ---
 
@@ -728,15 +948,29 @@ Evidence: no hardening pass has been performed; current phase is still Phase 0.
 
 ## Current Phase Order
 
-Phase 0 (CLOSED) → Phase 1 (CLOSED) → Phase 2 (CLOSED) → Phase 3 (IN PROGRESS) → Phase 3.5 →
-Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8
+Phase 0 (CLOSED) → Phase 1 (CLOSED) → Phase 2 (CLOSED) → Phase 3 (CLOSED) →
+Phase 3.5 (CLOSED) → Phase 4 (IN PROGRESS — QA INCOMPLETE) → Phase 5 → Phase 6 → Phase 7 →
+Phase 8
 
 ## Current Next Action
 
-Phase 0, Phase 1, and Phase 2 are all closed. Phase 3 — Quotations is IN PROGRESS: the database
-layer (tables, functions, triggers, RLS, permissions/role grants) is deployed and verified
-against remote, but no UI, server actions, or admin routes exist yet, and Browser QA is NOT
-STARTED. Per Rule 11 (Phase Order), Phase 3.5 must not be started until Phase 3 is CLOSED. A
-security-drift item (see "Unresolved item" under Phase 2 above) — two untracked policies on the
-pre-existing `media` bucket — remains intentionally open per explicit user decision, carried
-forward rather than resolved; revisit at the latest during Phase 8 Production Hardening.
+Phase 0 through Phase 3.5 are closed. Phase 4 — WhatsApp Automation implementation is now
+**complete**: database layer (7 tables, 7 functions, RLS, 5 permissions) matches remote with no
+drift; all four master-plan vertical slices are built and wired — enquiry confirmation,
+quotation messages, morning/evening follow-up automation with an atomic claim-then-send cron
+route, and campaigns (including scheduled sends); Templates/Automation/Campaigns/
+Messages/Settings admin UI all exist with real permission-gated routes and no dead nav links;
+stop/pause/resume and consent/opt-out (webhook-driven, now enforced centrally on every send
+path) are wired end-to-end. This session found and fixed 9 real bugs across this
+previously-uncommitted code (broken imports that failed the build outright, a raw-HTML
+description string, a missing success flag, a mismatched join alias, an unsupported/redundant
+RLS-duplicate filter, a NOT NULL constraint violation silently breaking enquiry-confirmation
+message logging, and missing opt-out enforcement on non-campaign sends) — see the Phase 4
+section above for the full list. `npm run lint` and `npm run build` are both clean.
+Phase 4 cannot close until: real Meta/staging credentials are configured and a real
+send-and-receive, webhook delivery, and cron firing are verified against a live WhatsApp
+number (Rule 9); and real browser acceptance testing is performed against every Phase 4 admin
+route. Neither has been done in this environment. A security-drift item (see "Unresolved item"
+under Phase 2 above) — two untracked policies on the pre-existing `media` bucket — remains
+intentionally open per explicit user decision, carried forward rather than resolved; revisit at
+the latest during Phase 8 Production Hardening.

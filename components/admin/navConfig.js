@@ -12,6 +12,11 @@ export const NAV_SECTIONS = [
         label: "Quotations",
         permission: ["view_quotations_own", "view_quotations_all"],
       },
+      {
+        href: "/admin/crm/bookings",
+        label: "Bookings",
+        permission: ["view_bookings_own", "view_bookings_all"],
+      },
       { href: "/admin/crm/customers", label: "Customers", permission: "manage_customers" },
       { href: "/admin/crm/followups", label: "Follow-ups", permission: "manage_followups" },
       { href: "/admin/crm/tasks", label: "Tasks", permission: "manage_tasks" },
@@ -45,8 +50,43 @@ export const NAV_SECTIONS = [
     ],
   },
   {
+    label: "Marketing",
+    items: [
+      {
+        href: "/admin/marketing/automation",
+        label: "Follow-up Automation",
+        permission: "manage_whatsapp_automation",
+      },
+      {
+        href: "/admin/marketing/templates",
+        label: "WhatsApp Templates",
+        permission: "manage_whatsapp_templates",
+      },
+      {
+        href: "/admin/marketing/campaigns",
+        label: "Campaigns",
+        permission: "manage_whatsapp_campaigns",
+      },
+      {
+        href: "/admin/marketing/messages",
+        label: "WhatsApp Messages",
+        permission: ["view_whatsapp_messages_own", "view_whatsapp_messages_all"],
+      },
+    ],
+  },
+  {
     label: "Account",
     items: [{ href: "/admin/security", label: "Security", permission: null }],
+  },
+  {
+    label: "Settings",
+    items: [
+      {
+        href: "/admin/settings/whatsapp",
+        label: "WhatsApp Settings",
+        permission: "manage_whatsapp_automation",
+      },
+    ],
   },
 ];
 
