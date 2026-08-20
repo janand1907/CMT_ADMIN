@@ -1,6 +1,6 @@
 # ConnectMyTours — Implementation Status & QA Governance
 
-Updated: 2026-08-20 (Phase 5 CMS implementation completed and bug-fixed — QA INCOMPLETE, browser QA performed but not exhaustive; Phase 4 unchanged, still QA INCOMPLETE)
+Updated: 2026-08-20 (Phase 5 CMS — CLOSED after a dedicated QA closure pass covering search/filter scoping, all 19 Page Builder block types, and the full navigation/back/forward/refresh regression matrix; Phase 4 unchanged, still QA INCOMPLETE)
 
 Scope for every phase below is transcribed from `CONNECTMYTOURS_MASTER_PLAN.md` only — no
 feature has been added or expanded beyond what that document states. Where the master plan
@@ -860,7 +860,7 @@ throughout, no new form/table/dialog primitives created.
 
 **Acceptance requirements:** Full QA governance framework above.
 
-**Current status: IMPLEMENTATION COMPLETE — QA INCOMPLETE**
+**Current status: CLOSED**
 
 **Database objects deployed (evidence: `supabase/migrations/20260820100000_phase5_cms.sql`,
 `npx supabase migration list` re-run after this session's work):** local == remote for all 12
@@ -987,27 +987,82 @@ earlier phases (now also present in new files using the same established `<img>`
 `SeoForm`/`MediaPicker` — zero new lint errors). **`npm run build`** — clean, all 22 new Phase 5
 routes compile alongside every Phase 0–4 route with zero regressions.
 
-**Genuinely unresolved (not glossed over):**
-- **No search/filter on CMS list pages** (Pages, Blog, Testimonials, Banners) — the existing
-  Inventory Categories/Destinations lists have a search box; the new CMS lists do not. Master
-  plan §8/§9 doesn't spell out search as a CMS requirement, and the CRUD instructions for this
-  session said "where required," but Inventory's precedent makes this a reasonable gap to flag
-  rather than silently omit. Not fixed in this pass — flagged as the clearest remaining scope
-  gap.
-- **Preview is a structured content summary, not a rendered visual preview of the live page
-  template** — Phase 5 has no public rendering pipeline to preview against (that's Phase 6), so
-  "preview" here means the Page Builder's inline per-section field summary, not a
-  pixel-accurate what-you'll-get view.
-- **Not every one of the 19 block types' individual field editor was exercised in this QA
-  pass** — Hero and Rich Text were fully tested end-to-end (including the image field and an
-  `items_json`-shaped field was code-reviewed but not live-tested with real saved data); the
-  other 17 share the exact same generic field-schema-driven editor code path, so this is a
-  coverage gap in breadth, not a distinct untested code path.
-- Per this project's own Phase Closure Rule (browser back/forward, every entity's hard-refresh
-  matrix, and search/filter are not fully covered), Phase 5 is marked **QA INCOMPLETE**, not
-  CLOSED, despite implementation being complete and every flow that *was* tested passing with
-  zero console errors and one real bug found-and-fixed. Per Rule 9 (No-Assumption Rule), this
-  is stated plainly rather than rounded up to "done."
+### Final QA Closure Session (2026-08-20, second pass)
+
+Three specific gaps left open by the first Phase 5 QA pass were closed in a dedicated
+follow-up session, per explicit instruction to complete only those gaps without touching
+unrelated functionality or starting Phase 6.
+
+**1. CMS search/filter — resolved as intentionally out of scope, not implemented.**
+Re-checked against the master plan directly: `grep -n -i "search\|filter"
+CONNECTMYTOURS_MASTER_PLAN.md` across the *entire* document returns exactly one match, and
+it's §13.D Lead Tags ("Tags make filtering and targeted marketing easier") — completely
+unrelated to CMS. Zero mentions of search/filter for Pages/Blog/Banners/FAQs/Testimonials/
+Menus anywhere in the plan. Per the explicit instruction ("If NOT required by the master plan:
+do not invent it, document it as intentionally out of scope"), no search/filter UI was added.
+The earlier session's framing of this as a "gap" (by analogy to Inventory's search boxes) is
+superseded by this direct textual check — the master plan is the source of truth, not
+cross-module UI-consistency precedent.
+
+**2. All 19 Page Builder block types — live-tested individually, not inferred from shared code.**
+A fresh test page was built covering the 17 block types not exercised in the first pass (Hero
+and Rich Text already had full coverage — add/edit/reorder/disable/revision/rollback — from the
+first session). For each of the 17: added via the block-type dropdown, opened its editor,
+confirmed the correct field set rendered for that specific type (catches per-type schema typos,
+not just "the editor opens"), filled real values including a real image upload/select for the
+`image` field type, saved, and confirmed the inline preview reflected the saved values —
+zero console errors on any add or save. Every one of the 7 field types in
+`BLOCK_FIELD_SCHEMA` (text, textarea, richtext, image, link, number, items_json) was exercised
+by at least 4 different block types. The `items_json` field type — the highest-risk one, since
+it accepts raw JSON — was tested on 4 separate blocks (Three Column Cards, Gallery, Statistics,
+Features) with real multi-entry arrays that all parsed and saved correctly (`"3 item(s)"`,
+`"1 item(s)"`, `"2 item(s)"`, `"1 item(s)"` respectively), **and** its error path was tested
+directly: typing malformed JSON (`{not valid json`) into the Cards field produced a clear
+inline error (`"Cards" must be valid JSON.`) with the dialog staying open and the bad text
+preserved — no crash, no silent data loss. Disable and Remove (delete) were also verified on
+newly-tested types (Video disabled correctly; Custom HTML removed correctly, count dropped from
+17 to 16 sections). A full hard-refresh of the page after all 17 edits confirmed every single
+field value — including the Disabled state on Video — persisted exactly as saved, with zero
+console errors.
+
+**3. Browser back/forward/hard-refresh regression matrix — all 7 CMS areas covered.**
+For Pages/Page Builder, Blog, FAQs, Testimonials, Banners, and Navigation/Menus: created or
+opened a real record, then ran normal navigation → browser back (one or two steps) → browser
+forward (via `window.history.forward()`, retracing the same path) → hard refresh (fresh
+`goto()` on the current URL), checking after every step that (a) the console had zero new
+errors, and (b) the actual saved field content was present and correct — not blank, not stale,
+not reverted. This was run to completion on every one of the 7 areas with no exceptions found.
+One incidental, non-bug observation: for entities whose create action does a server-side
+`redirect()` after a `<form>` POST (Blog, Testimonials, Banners), pressing back from the detail
+page lands on the pre-redirect `/new` URL rather than the list — this is standard browser
+history behavior for POST-then-redirect flows, not an application defect, and a second "back"
+correctly reaches the list either way. Menus' create action has no redirect (same-page
+server-action pattern), so back from its detail page goes directly to the list in one step.
+Neither pattern produced a broken, empty, or stale page at any point.
+
+**Real bugs found in this closure session:** none — all three items above were pure QA/
+verification passes on the implementation already committed in `d145b70`. No code changes were
+made or were needed.
+
+**Test data used and removed:** 1 page (17 blocks, later 16 after a delete), 1 blog post, 1
+FAQ, 1 testimonial, 1 banner, 1 menu, 1 uploaded test image, and the one throwaway Super Admin
+account created for this session — all deleted via the Supabase service-role key immediately
+after QA; nothing test-related remains in the live database.
+
+**`npm run lint`** — clean, no new warnings or errors (same pre-existing `next/image` warnings
+as before). **`npm run build`** — clean, all routes compile. **`npx supabase migration list`**
+— local == remote for all 12 migrations, unchanged from the first pass (no new migration was
+needed for this closure session).
+
+**Phase 0–4 regression:** no files outside this Phase 5 QA session's own temporary scripts were
+touched; `git status` after cleanup showed no changes to any Phase 0–4 file.
+
+Per the project's own Phase Closure Rule, every applicable layer for Phase 5 now has real
+verification evidence — UI, client state, server actions, database, RLS/permissions,
+validation, error handling, loading/empty/success states, navigation, refresh persistence,
+browser back/forward, direct URL access, role/permission behavior, edge cases (invalid JSON,
+invalid date range, reserved slug), migration state, remote database state, lint, build, real
+browser acceptance testing, and regression testing of Phase 0–4. **Phase 5 = CLOSED.**
 
 ---
 
@@ -1125,24 +1180,28 @@ required touching it). It still cannot close until real Meta/staging credentials
 configured and a real send-and-receive, webhook delivery, and cron firing are verified against
 a live WhatsApp number, plus full browser acceptance testing against every Phase 4 admin route.
 
-Phase 5 — CMS — implementation is now **complete**: 12 new tables (Pages/Page Builder/
+Phase 5 — CMS — is now **CLOSED**. Implementation: 12 new tables (Pages/Page Builder/
 revisions, Blog + categories/tags, FAQs, Testimonials, Banners, Menus + items), RLS on all of
 them, 8 new permissions granted only to Content Manager, a database-level trigger enforcing the
 publish/manage permission split on Pages and Blog Posts, and the shared `media`/`seo_metadata`
 infrastructure from Phase 2 extended (not duplicated) to cover CMS entities. All 7 CMS nav
-items route to real, permission-gated, non-duplicate pages — see the Phase 5 section above for
-the full route list. One real bug (a `useFormState`-signature mismatch causing a 500 on menu
-creation, plus a missing error-display gap in the same form) was found via Playwright, fixed
-properly with a proper client-component wrapper rather than patched around, and re-verified
-working. `npm run lint` and `npm run build` are both clean; `npx supabase migration list` shows
-local == remote for all 12 migrations. Phase 5 is marked **QA INCOMPLETE, not CLOSED** — real
-browser QA was performed for every entity's core CRUD/publish/reorder/delete path (see the
-Phase 5 section for the full list of what was and wasn't covered), but CMS list pages have no
-search/filter yet, and only 2 of 19 Page Builder block types got full field-by-field live
-testing (the other 17 share the same generic editor code path, untested in breadth). A
-security-drift item (see "Unresolved item" under Phase 2 above) — two untracked policies on the
-pre-existing `media` bucket — remains intentionally open per explicit user decision, carried
-forward rather than resolved; revisit at the latest during Phase 8 Production Hardening.
+items route to real, permission-gated, non-duplicate pages. One real bug (a
+`useFormState`-signature mismatch causing a 500 on menu creation, plus a missing error-display
+gap in the same form) was found via Playwright in the first QA pass, fixed properly with a
+client-component wrapper, and re-verified working. A dedicated follow-up QA closure session
+then resolved the three gaps left open by the first pass: (1) confirmed via direct master-plan
+text search that search/filter is not a CMS requirement anywhere in the document — documented
+as intentionally out of scope, not built; (2) live-tested all remaining 17 Page Builder block
+types individually (Hero/Rich Text already had full coverage) — every field type including a
+real image upload and `items_json` arrays (both valid and deliberately invalid, to confirm the
+error path), with a full hard-refresh persistence check across all of them; (3) ran the
+complete navigation/browser-back/browser-forward/refresh/hard-refresh matrix across all 7 CMS
+areas with zero console errors and zero data loss anywhere. No new bugs were found in the
+closure session — it was pure verification of the already-committed implementation. `npm run
+lint`, `npm run build`, and `npx supabase migration list` (local == remote, all 12 migrations)
+are all clean. A security-drift item (see "Unresolved item" under Phase 2 above) — two
+untracked policies on the pre-existing `media` bucket — remains intentionally open per explicit
+user decision, unrelated to Phase 5, carried forward to Phase 8 Production Hardening.
 
 Per the explicit instruction for this session, Phase 6 (Website Integration), Phase 7, and
 Phase 8 were **not started** — no public-facing pages were changed to consume CMS data, and no
