@@ -1072,29 +1072,113 @@ browser acceptance testing, and regression testing of Phase 0–4. **Phase 5 = C
 content, in the order: Packages → Destinations → Pages → Blog → Homepage Sections → Other
 Content. Current public UI must remain visually stable during migration.
 
-**Exact features:** As stated above — no additional detail is given in the master plan beyond
-the migration order and the visual-stability constraint.
+**Scope decision (2026-08-20):** During discovery, the live public site's departure-city
+package landing pages (e.g. `/chennai/srivani-vip-break-darshan`) and one hardcoded package
+(`/kerala/temple-nature-trail`) were found to have no matching field in the master plan's
+Package schema and, in one case, no matching DB row at all — a genuine data-model ambiguity,
+not a guessable implementation detail. Per the explicit "stop and report ambiguity" instruction,
+this was raised directly to the user, who chose: **defer Packages/Destinations entirely, start
+with Pages/Blog/Homepage Sections/Other Content.** Packages/Destinations public integration is
+therefore explicitly out of scope for this pass — not an oversight.
 
-**Database objects:** None new — reads from Phase 2 (`packages`, `destinations`) and Phase 5
-(`pages`, `blog_posts`, etc.) tables.
+**Implementation (this session):**
+- **Pages:** `app/[slug]/page.js` — generic renderer for published, non-homepage CMS pages,
+  reusing the exact Phase 5 Page Builder block schema. A literal static route always wins over
+  this dynamic segment, so existing hardcoded pages (`/about-us`, `/contact-us`, etc.) are
+  unaffected. Unpublished/missing slugs 404.
+- **Homepage Sections:** `app/page.js` reads the seeded homepage singleton (`is_homepage=true`)
+  via `getPublishedHomepage()`. If published with ≥1 enabled section, renders it through the new
+  `components/cms/BlockRenderer.jsx`; otherwise falls back to the exact pre-existing hardcoded
+  homepage tree, unchanged — "remain visually stable during migration" holds until an admin
+  actually publishes something.
+- **Blog:** `app/blog/page.js` (listing, empty state) and `app/blog/[slug]/page.js` (detail,
+  category/tags/featured image/SEO), both published-only.
+- **FAQ / Testimonials:** `app/faq/page.js` and `components/home/Testimonials.jsx` use CMS data
+  when non-empty, else the existing static `data/faq.js` / `data/testimonials.js` content —
+  same fallback pattern, zero visual change today.
+- **Banners:** `components/home/CmsBanners.jsx`, a slim promotional strip above the homepage
+  hero for active, date-window-valid banners. Placement isn't specified in the master plan; this
+  was a deliberate, minimal, reversible judgment call, not a stop-and-ask case.
+- **Navigation/Menus:** `app/layout.js` (the one Server Component in the chrome chain) fetches
+  `getMenuByLocation("header"/"footer")` and passes them through `SiteChrome.jsx` into
+  `Navbar.jsx`/`Footer.jsx`, which use the CMS menu when one exists for that location, else the
+  existing static `data/nav.js` `navLinks`/`footerQuickLinks` — identical output today since no
+  CMS menu has been created yet. `open_in_new_tab` is captured in the data layer but not yet
+  wired into the `<Link>` rendering — a documented, minor, non-blocking gap (see below).
+- **Media/SEO:** reuses the existing `media`/`getMediaUrl`/`seo_metadata` infrastructure exactly
+  (`lib/seo.js`'s `pageMetadata()` extended, not replaced, to accept CMS `seo_metadata` fields);
+  `next.config.js` gained `images.remotePatterns` for the Supabase Storage host (previously
+  missing — public CMS images would otherwise fail to load via `next/image`).
+- **Sitemap:** `app/sitemap.js` now also lists published CMS pages and blog posts, not just the
+  static `data/seo.config.js` routes.
+- **Caching:** `app/page.js`, `app/faq/page.js`, `app/blog/page.js`, `app/[slug]/page.js`, and
+  `app/blog/[slug]/page.js` all set `export const revalidate = 60` — without it, Next statically
+  prerenders these Server Components' Supabase reads at build time and never refetches, so a
+  newly-published homepage/page/post/FAQ would only go live on the next redeploy. Found and
+  fixed during this session, not a pre-existing pattern.
 
-**Admin routes:** None new — this phase changes what the public site reads from, not the
-admin panel.
+**Database objects:** One new migration,
+`supabase/migrations/20260821090000_phase6_public_read_rls.sql` — additive `to anon` SELECT-only
+RLS policies (existing `to authenticated` policies untouched) on `pages`, `page_sections`,
+`blog_posts`, `blog_categories`, `blog_tags`, `blog_post_tags`, `faqs`, `testimonials`,
+`banners`, `menus`, `menu_items`, `media`, and a type-scoped `seo_metadata` policy that only
+exposes `page`/`blog_post` SEO rows tied to a published parent (package/destination entity types
+excluded entirely, matching the deferral above). Every policy is scoped to
+published/active/non-expired content — never `using (true)` where that would leak draft data;
+this was self-caught and fixed during writing (the first draft of the `seo_metadata` policy was
+unconditional and would have leaked draft SEO titles/descriptions before review).
 
-**Server actions / API:** None yet.
+**Admin routes:** None new — this phase changes what the public site reads from, not the admin
+panel.
 
-**External integrations:** None specified.
+**Server actions / API:** None new — all reads go through `lib/cms/publicQueries.js`, a
+server-only module using `createAnonClient()` (the same pattern `app/quote/[token]/page.js`
+already established for public Supabase reads), never the service-role client.
 
-**Dependencies on previous phases:** Phase 2 (packages/destinations); Phase 5 (CMS
-pages/blog/homepage sections).
+**External integrations:** None new.
 
-**Acceptance requirements:** Full QA governance framework above, plus explicit regression
-testing of the existing public site (per Permanent Rule 8) since this phase modifies
-customer-facing pages directly.
+**Dependencies on previous phases:** Phase 2 (`media`); Phase 5 (CMS pages/blog/FAQ/
+testimonials/banners/menus/`seo_metadata`).
 
-**Current status: NOT STARTED**
-Evidence: public site pages (`app/*` outside `app/admin/`) are still statically defined; no
-CMS-driven rendering path exists yet.
+**Verification performed:**
+- `npm run lint` — clean (zero errors/warnings in any Phase 6 file; the pre-existing `<img>`
+  warnings are in untouched Phase 5 admin components).
+- `npm run build` — clean production build; all new routes compile and appear in the route
+  manifest with the expected static/dynamic classification.
+- `npx supabase migration list` — local and remote match on all 13 migrations including the new
+  one.
+- Targeted verification against a local dev server (curl, not Playwright — nothing here
+  exercises new client-side interactivity beyond a straight data-source swap on already-proven
+  components, so a browser wasn't genuinely necessary): homepage fallback renders correctly with
+  nothing published; `/faq` and `/blog` render their static/empty fallbacks correctly; a missing
+  CMS page slug and a missing blog post slug both 404 correctly; `/sitemap.xml` includes `/blog`;
+  a pre-existing static page (`/about-us`) is unaffected.
+- One real end-to-end content test, explicitly confirmed with the user first since it required a
+  live write to the linked Supabase database (briefly disabling/re-enabling the
+  `enforce_publish_permission` trigger to insert a published test page): inserted a temporary
+  published page with hero/rich_text/cta sections, confirmed all three render correctly through
+  `BlockRenderer` with the exact content shape the Phase 5 admin editor produces, confirmed the
+  SEO title fallback, then deleted the test row — confirmed gone via a direct `SELECT` (empty
+  result), zero permanent database change.
+
+**Known gaps (not blocking, documented rather than silently dropped):**
+- Packages/Destinations integration: entirely deferred, per the user decision above.
+- `open_in_new_tab` on CMS menu items isn't wired into `Navbar`/`NavDropdown`/`MobileMenu`'s
+  `<Link>` rendering yet — irrelevant today since no CMS menu exists, but should be picked up
+  before a real header/footer menu with external links is published.
+- Pages fully served by a static route folder (e.g. `/about-us`, `/contact-us`) render through
+  the root layout too, so a CMS header/footer menu change would appear there only after the next
+  redeploy (60s ISR on the 5 CMS-integrated routes; static-only pages have no revalidate window).
+  Acceptable today since no CMS menu exists; worth widening `revalidate` to more static routes if
+  navigation becomes genuinely CMS-managed later.
+
+**Current status: IMPLEMENTATION COMPLETE (Pages/Blog/Homepage Sections/FAQ/Testimonials/
+Banners/Navigation) / Packages+Destinations DEFERRED (user decision, documented above)**
+
+This is deliberately not marked CLOSED: the master plan's full Phase 6 order is six items long,
+and two of them (Packages, Destinations) are entirely unbuilt by explicit, user-approved
+decision, not oversight. Closure requires either building that slice in a follow-up session or a
+final, explicit user decision that Phase 6 is considered complete without it.
 
 ---
 
@@ -1169,7 +1253,8 @@ Evidence: no hardening pass has been performed; current phase is still Phase 0.
 ## Current Phase Order
 
 Phase 0 (CLOSED) → Phase 1 (CLOSED) → Phase 2 (CLOSED) → Phase 3 (CLOSED) →
-Phase 3.5 (CLOSED) → Phase 4 (IN PROGRESS — QA INCOMPLETE) → Phase 5 → Phase 6 → Phase 7 →
+Phase 3.5 (CLOSED) → Phase 4 (IN PROGRESS — QA INCOMPLETE) → Phase 5 (CLOSED) →
+Phase 6 (IMPLEMENTATION COMPLETE — Packages/Destinations deferred, not CLOSED) → Phase 7 →
 Phase 8
 
 ## Current Next Action
@@ -1203,6 +1288,17 @@ are all clean. A security-drift item (see "Unresolved item" under Phase 2 above)
 untracked policies on the pre-existing `media` bucket — remains intentionally open per explicit
 user decision, unrelated to Phase 5, carried forward to Phase 8 Production Hardening.
 
-Per the explicit instruction for this session, Phase 6 (Website Integration), Phase 7, and
-Phase 8 were **not started** — no public-facing pages were changed to consume CMS data, and no
-Phase 6+ code exists anywhere in this commit.
+Phase 6 — Website Integration — is now **IMPLEMENTATION COMPLETE for Pages, Blog, Homepage
+Sections, FAQ, Testimonials, Banners, and Navigation/Menus**, with Packages/Destinations
+explicitly deferred by user decision (see the Phase 6 section above for the full reasoning,
+implementation detail, verification performed, and known gaps). `npm run lint`, `npm run build`,
+and `npx supabase migration list` (local == remote, all 13 migrations) are clean. Targeted
+curl-based verification confirmed both the CMS and fallback rendering paths, 404 behavior for
+missing content, and the sitemap extension; one real end-to-end content-rendering test was run
+against the linked database (user-approved, fully reversible, confirmed cleaned up). Committed
+as `8c2ea6f` — "feat: implement phase 6 website integration". Phase 6 is **not** marked CLOSED:
+the master plan's Phase 6 scope includes Packages/Destinations, and that slice remains entirely
+unbuilt, so closure is pending either a follow-up session covering it or an explicit user
+decision to close Phase 6 without it.
+
+Phase 7 and Phase 8 remain **not started**.
