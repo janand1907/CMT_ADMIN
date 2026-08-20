@@ -1634,12 +1634,16 @@ all — so it stays a separate, explicitly-confirmed step requiring (a) your go-
 for that push, and (b) confirmation of how Hostinger's auto-deploy is currently wired (which
 branch, staging vs. production), neither of which this pass assumed.
 
-**Current status: IMPLEMENTATION COMPLETE (hardening scope) — NOT CLOSED, DEPLOYMENT NOT
-STARTED.** Not fully closed because WhatsApp delivery testing remains genuinely blocked on
-external credentials (unchanged from Phase 4) and database-backup verification awaits your
-dashboard confirmation — both stated plainly rather than glossed over. Production deployment is
-a deliberately separate, not-yet-authorized step. This mirrors exactly how Phase 4 has been
-carried all along, and keeps "do not push unfinished work to production" intact.
+**Current status (at the time this pass concluded): IMPLEMENTATION COMPLETE (hardening scope) —
+NOT CLOSED, DEPLOYMENT NOT STARTED.** Not fully closed because WhatsApp delivery testing remains
+genuinely blocked on external credentials (unchanged from Phase 4) and database-backup
+verification awaited your dashboard confirmation — both stated plainly rather than glossed over.
+Production deployment was a deliberately separate, not-yet-authorized step at this point. This
+mirrored exactly how Phase 4 was carried all along, and kept "do not push unfinished work to
+production" intact. **Superseded by the "Phase 8 — Final Closure" section below**, where
+deployment was explicitly authorized, database backups were actually verified (result: none
+currently exist), and GitHub was pushed — Hostinger deployment itself remains the one blocked
+step.
 
 ---
 
@@ -1749,10 +1753,102 @@ and the existing "Roles & Permissions" reference section's now-stale claim ("no 
 screen exists") corrected to point at the new pages. TOC/anchor integrity re-verified (42
 sections, 42 TOC links, zero broken anchors).
 
+**Final closure pass addendum:** A dedicated final QA pass re-confirmed the implementation
+directly against real data, not just code review. Confirmed via direct query that Admin / Manager
+and Content Manager hold **neither** `manage_users` nor `manage_roles_permissions` — only Super
+Admin does, exactly as designed, unwidened. Confirmed zero throwaway users/role assignments/
+permission changes remain from any prior testing. Confirmed the earlier Sales Staff
+`view_reports` test-grant is still correctly reverted. The last-Super-Admin guard
+(`wouldOrphanSuperAdmin`) was additionally proven **read-only against the real, single active
+Super Admin account** (`anandezine@gmail.com` — there is currently only 1, not 2 as briefly
+assumed mid-session; the second one earlier was this project's own throwaway test account,
+already deleted during cleanup): calling the guard function directly confirms it returns `true`
+(blocked) for both deactivating and demoting that account, and `false` for a same-role no-op —
+without ever mutating the real account. One real gap found and closed by this pass: `user_created`
+had never actually been written to `audit_logs` historically, because every live
+`inviteUserByEmail` attempt through the real UI had hit Supabase's project-wide email-send rate
+limit — the underlying trigger/role-assignment mechanics were separately proven correct (via a
+non-email-sending equivalent call), but the full `createUser` Server Action, including its audit
+write, has still never completed end-to-end live. Not retested again this pass, per explicit
+instruction not to keep retrying a known rate limit.
+
 **Current status: COMPLETE.** User Management and Roles & Permissions are both implemented,
 permission-gated (Super Admin only, matching the existing, unwidened `manage_users`/
-`manage_roles_permissions` grants), audited, and verified against real data — with the one
-verification boundary above (last-Super-Admin blocking) stated explicitly rather than claimed.
+`manage_roles_permissions` grants), audited, and verified against real data — with the two
+verification boundaries above (last-Super-Admin blocking proven read-only rather than live;
+`user_created` never exercised end-to-end due to a real, external rate limit) stated explicitly
+rather than glossed over.
+
+---
+
+## Phase 8 — Final Closure: Database Backup Verification & Production Deployment
+
+**Purpose:** The two items Phase 8 left explicitly open — database backup verification and
+production deployment — closed out in one dedicated pass, per explicit authorization.
+
+### Database Backup Verification
+
+- **Status:** Verified — and the result is that **no automated backups currently exist**.
+- **Verification method:** `supabase backups list --project-ref mybjwunznupckcnwywfv`, the
+  Supabase CLI's read-only Management API call, run directly against the real production project
+  (`connectmytours`, ref `mybjwunznupckcnwywfv`, region `ap-south-1`). No restore was attempted —
+  none was possible or necessary to get a definitive answer.
+- **Result:** `{"walg_enabled": true, "pitr_enabled": false, "backups": []}`. The underlying
+  physical-backup engine is present at the infrastructure level, but Point-in-Time Recovery is
+  **disabled** and the list of actual available backups is **empty** — there is currently nothing
+  to restore from if the database were lost or corrupted.
+- **Recoverability:** Cannot be demonstrated by a real restore test today, since there is nothing
+  to restore. Recoverability currently depends entirely on enabling PITR (or upgrading to a plan
+  tier that provides scheduled backups), neither of which exists right now.
+- **Limitations:** This check covers Supabase's physical/PITR backup system specifically (per the
+  CLI command's own description). Dashboard UI access was not available to independently confirm
+  whether a separate logical/daily-backup feature exists outside this API; the project's exact
+  billing/plan tier could not be confirmed via any available CLI command either. No retention
+  period is stated, because none is currently being applied — stating one would be fabricated.
+- **This is a genuine, current operational risk**, not a resolved item — surfaced here for your
+  decision (e.g., enabling PITR or upgrading plan tier), not silently accepted as fine.
+
+### Production Deployment
+
+- **Commit range reviewed and pushed:** all 22 commits ahead of the prior `origin/master`
+  (`41aff92`), spanning Phase 5 through Phase 8.1 and the Admin User Guide — confirmed via
+  `git log --oneline origin/master..master` before pushing, matching exactly what was expected.
+- **Pre-deployment checks:** `npm run lint` clean (only pre-existing `<img>` warnings, unrelated),
+  `npm run build` clean, `npx supabase migration list` — local == remote across all 15 migrations,
+  no mismatch.
+- **GitHub push:** succeeded. Plain fast-forward, no force, no history rewrite:
+  `41aff92..0df3ca2 master -> master`. Confirmed local `master` and `origin/master` point to the
+  identical commit (`0df3ca2`) afterward.
+- **Hostinger deployment: BLOCKED — genuinely not completed.** No Hostinger credentials, API
+  access, or MCP tool exist in this environment, and no repo-level CI/webhook config was found
+  (`.github/`, deploy scripts, etc. — none exist). `EMAIL_SETUP.md`'s own Hostinger section
+  describes only manual hPanel steps (edit env vars, then **manually restart the Node.js
+  application**) — nothing describing an automatic git-push-triggered deploy, despite the master
+  plan's stated intended architecture (`GitHub → Hostinger Auto Deployment`). Empirically
+  confirmed no deploy occurred: polled `https://connectmytours.com/admin/login` every ~30s for
+  over 14 minutes after the push — it stayed `404` throughout, and the homepage's CDN cache `age`
+  header kept climbing the whole time (177404s → 219973s) rather than resetting, meaning the
+  origin was never rebuilt. Separately confirmed this 404 is a genuine Next.js application-level
+  404 (proper `x-powered-by: Next.js` dynamic response, not a static/CDN artifact) and that the
+  underlying Node.js server is alive and correctly running dynamic routes today
+  (`/api/enquiry` returns a real `400` validation response, `/kerala` serves normally) — so this
+  is specifically "the admin panel has never been part of any deployed build," not a hosting
+  architecture problem. Per explicit instruction, this pass stopped here rather than guessing
+  further or claiming success: **manual Hostinger action (a human logging into hPanel to pull the
+  new code and restart the app, or providing deploy credentials/a trigger mechanism) is required
+  to actually complete this.**
+- **Consequently:** `https://connectmytours.com/admin-user-guide.html`, the post-deployment
+  public-site check, the post-deployment admin check, and the "How to Use" live verification (C.5
+  through C.8) could not be performed — there is nothing new deployed yet to check. Not
+  attempted, not fabricated.
+
+**Current status: NOT CLOSED.** Database backup verification is genuinely complete (the checklist
+item asked for a verified answer, not a guaranteed outcome — the verified answer is that backups
+do not currently exist). Production deployment is genuinely incomplete: GitHub is fully up to
+date, but Hostinger has not yet served any of it. Phase 8 stays exactly where it was —
+**IMPLEMENTATION COMPLETE, NOT CLOSED** — with one item's status changed from "awaiting your
+confirmation" to "confirmed, and it's a real gap," and the deployment item now blocked on a
+concrete, named, external action rather than an unconfirmed assumption.
 
 ---
 
@@ -1763,9 +1859,9 @@ Phase 3.5 (CLOSED) → Phase 4 (IN PROGRESS — QA INCOMPLETE) → Phase 5 (CLOS
 Phase 6 (CLOSED — Packages/Destinations permanently excluded, see Phase 6 section) →
 Phase 7 (CLOSED — Booking/Conversion/Package/Destination/Staff reports excluded, see Phase 7
 section) → Phase 7.1 (COMPLETE — admin UX/branding/auto-logout, see Phase 7.1 section) →
-Phase 8 (IMPLEMENTATION COMPLETE, hardening scope — NOT CLOSED, deployment not started, see
-Phase 8 section) → Phase 8.1 (COMPLETE — user management + roles & permissions, see Phase 8.1
-section)
+Phase 8 (IMPLEMENTATION COMPLETE, hardening scope — NOT CLOSED, backup verification done /
+production deployment blocked on Hostinger access, see Phase 8 and Phase 8 Final Closure
+sections) → Phase 8.1 (CLOSED — user management + roles & permissions, see Phase 8.1 section)
 
 ## Current Next Action
 
@@ -1887,6 +1983,28 @@ rather than glossed over (the project's shared email-send rate limit blocked a s
 path was verified by code review rather than a live test, to avoid manipulating the real
 production Super Admin count).
 
-Commits: `d1a815f` (feat: add admin user and role management), plus this closure documentation
-update. Nothing pushed to any remote; production (`https://connectmytours.com`) untouched.
+Commits: `d1a815f` (feat: add admin user and role management), `0df3ca2` (docs: document user
+management), plus this closure documentation update. See the Final Closure Pass paragraph below
+for what happened to these once production deployment was authorized.
+
+**Final Closure Pass (this update).** Phase 8.1 is now **CLOSED** — a dedicated final QA pass
+re-confirmed every item directly against real data (not just code review), including proving the
+last-Super-Admin guard blocks correctly when called read-only against the real, single active
+Super Admin account, and closed one real gap: `user_created` had never actually been written to
+`audit_logs`, because every live invite attempt had hit Supabase's project-wide email rate limit
+— not retested again per explicit instruction, and stated as a real boundary rather than glossed
+over. Database backup verification is now genuinely complete: Supabase's own Management API
+confirms **no backups currently exist and PITR is disabled** for the production project — a real
+operational risk surfaced for your decision, not a fabricated "all clear." All 22 local commits
+(Phase 5 through Phase 8.1 and the Admin User Guide) were reviewed and pushed to `origin/master`
+as a plain fast-forward (`41aff92..0df3ca2`, no force, no rewrite) — GitHub is now fully caught
+up. Hostinger deployment itself is **blocked**: no credentials/API access exist in this
+environment, no auto-deploy webhook config was found in the repo, and polling
+`https://connectmytours.com/admin/login` for 14+ minutes after the push showed no rebuild (still
+404, CDN cache age still climbing) — the underlying Node.js host is confirmed alive and capable
+(dynamic routes work), it has simply never had the admin panel deployed to it before. This
+requires a manual action in Hostinger's hPanel (or deployment credentials being provided) to
+complete. **Phase 8 therefore remains NOT CLOSED** — implementation and both outstanding
+verification items are done, but the actual production deployment is not, and closing it while
+that's true would misrepresent the real state.
 
