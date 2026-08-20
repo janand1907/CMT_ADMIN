@@ -1512,28 +1512,134 @@ correctly shown active afterward.
 handling, performance optimization, backup verification, cron verification, WhatsApp delivery
 testing, production deployment.
 
-**Exact features (master plan §14, §15):**
-- Security: Supabase Auth, role-based authorization, RLS, environment variables, input
-  validation, API protection, rate limiting where appropriate, secure file uploads, audit
-  logs, error logging, database backups, secrets never exposed to the frontend
-- Deployment: Claude Code → GitHub → Hostinger Auto Deployment; Hostinger cron/scheduled jobs
-  for automation
+**Discovery before implementation:** Phase 8 started from a bare "start the phase 8" instruction
+(unlike every prior phase's detailed kickoff spec), so a discovery pass ran first rather than
+guessing scope on the phase that touches production. An Explore agent swept the infrastructure/
+security surface not otherwise reviewed (CI/CD, env var isolation, rate limiting, cron/webhook
+security, audit logging, error logging, input validation, file upload security) and found the
+codebase generally well-built — secrets correctly isolated to server-only modules with zero
+client-side importers, RLS/permission checks consistent, the public enquiry endpoint already has
+real validation + rate limiting + a honeypot — with the concrete gaps mapped below. Separately,
+local `master` was found to be 16 commits ahead of `origin/master` (everything since Phase 5 has
+only ever been committed locally) — this materially changes what "production deployment" means
+here (see below).
 
-**Database objects:** None new — this phase hardens existing objects across all prior phases.
+**Scope decisions, made explicitly before implementation:**
+- WhatsApp/Meta credentials confirmed **not yet available** — Phase 4 and this phase's "WhatsApp
+  delivery testing" item stay deferred exactly as before, unchanged by this pass.
+- Error logging: **lightweight in-house** (new table + admin viewer), no new external
+  service/dependency/account.
+- SVG upload gap: **sanitize on upload**, don't remove SVG support.
+- Media bucket policy drift (deferred from Phase 2): **fix now**.
 
-**Admin routes:** None new.
+**Implementation:**
+- **Security headers** (`next.config.js`): `X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy` on all routes. No CSP —
+  this app has no existing CSP baseline, and getting one right needs page-by-page verification
+  a first pass can't safely claim; a wrong CSP is worse than none. Verified via `curl -D -` that
+  all five headers appear on a real response.
+- **Login rate limiting** (`app/admin/login/actions.js`): same in-memory-per-process technique
+  already established in `app/api/enquiry/route.js`, but only failed attempts count (a legitimate
+  staff member logging in repeatedly must never get locked out; only repeated wrong passwords
+  should), keyed on IP+email. 5 failures / 10 minutes. Verified with 6 real login attempts
+  against a throwaway account: attempts 1–5 correctly returned "Invalid login credentials",
+  attempt 6 correctly returned the rate-limit message — and, importantly, a subsequent attempt
+  with the *correct* password was also blocked (proving it throttles the IP+email combo, not
+  just re-validating credentials), while a login on a *different* account from the same IP
+  succeeded normally (proving the block is correctly scoped, not global).
+- **Cron secret comparison** (`app/api/cron/whatsapp-followup/route.js`): switched from a plain
+  `!==` string comparison to the same `crypto.timingSafeEqual` pattern the WhatsApp webhook's
+  signature check already used correctly, for consistency. Verified: missing token and wrong
+  token both still correctly return 401.
+- **SVG upload sanitization** (`lib/media/sanitizeSvg.js`, wired into
+  `app/admin/(protected)/inventory/media/actions.js`'s `uploadMedia`): a small, dependency-free
+  regex-based strip of `<script>` blocks, `on*` event-handler attributes, and `javascript:` URIs
+  — not a general HTML-sanitizer dependency (DOMPurify+jsdom) for one well-understood threat (an
+  SVG opened directly from its public Storage URL executes embedded script, unlike an `<img
+  src="...svg">` reference). Verified against real stored data, not just code inspection: uploaded
+  an SVG containing a `<script>` tag, an `onload` attribute, and an `onclick` attribute, then
+  downloaded the actual object back from Supabase Storage — all three were stripped, the
+  legitimate visual content (a circle shape) was preserved. Raster upload path (unchanged code)
+  re-verified working via a plain PNG upload, correctly re-encoded to WebP as before.
+- **Error logging** (new `error_logs` table + RLS in the Phase 8 migration; `lib/logging/
+  logServerError.js` helper; wired into the cron route's two existing failure sites, the
+  webhook's two existing failure sites, and a new try/catch around the login action's auth call
+  for genuinely unexpected exceptions): reuses `view_audit_logs` rather than a new permission key
+  (same "operational visibility" concern as the audit trail it sits next to). New viewer page
+  `/admin/settings/error-logs`, added to `navConfig.js`'s Settings section, reusing the existing
+  `Table`/`Badge`/`PageHeader` admin design-system components. Verified: renders the correct
+  empty state with zero real errors; a manually-inserted test row rendered correctly (source
+  badge, message, JSON context, timestamp) and was cleaned up; a Sales Staff account (no
+  `view_audit_logs`) correctly got "Access denied" on direct URL access, and the nav item is
+  correctly absent for that role.
+- **Audit logs — logout** (`lib/auth/recordLoginEvent.js`'s new `recordLogoutEvent`, called from
+  `logout()` in `app/admin/login/actions.js`): symmetric with the existing login_success/
+  login_failed entries. Verified directly against real `audit_logs` rows: the 5 failed attempts,
+  1 successful login, and 1 logout from the rate-limit test above all appear correctly.
+- **Media bucket policy drift** (Phase 8 migration): dropped `media_bucket_select_authenticated`
+  (unscoped `SELECT` — any authenticated user, not just `manage_media` holders — found during
+  Phase 2, explicitly deferred "at the latest, Phase 8") and the redundant
+  `media_bucket_write_managed`. The 4 correctly-`manage_media`-scoped policies from Phase 2's own
+  migration were already in place and are untouched. Bucket was empty at the time of this change
+  (confirmed before and after), so zero data-access risk either way.
 
-**Server actions / API:** None yet.
+**Explicitly out of scope for this pass (documented, not silently dropped):**
+- **WhatsApp delivery testing / Phase 4 closure** — blocked on Meta credentials, unchanged.
+- **Broader audit-log coverage** (permission changes, CMS publish actions, media deletes, CRM
+  mutations beyond login/logout) — materially larger than one Phase 8 bullet; a real, known gap
+  for a future pass, not built here.
+- **"Users & Roles" and the other missing Settings sub-pages** (`Website Settings`, `Email/SMTP`,
+  `SEO Settings`, `System Settings`, a general `Audit Logs` viewer beyond this phase's narrower
+  error-log one) — master plan §2 names these under Settings, but only `WhatsApp Settings` (Phase
+  4) and now `Error Logs` (this phase) have ever been built; no phase 0–8 breakdown explicitly
+  assigns building the rest. A genuine backlog gap, flagged rather than silently built or ignored.
+- **CI/CD pipeline** — not named in master plan §14, and the deployment mechanism itself doesn't
+  require one (Hostinger's own auto-deploy-on-push, not a GitHub Actions-driven deploy).
+- **Database backups** — Supabase-hosted Postgres backup retention is a project-tier/dashboard
+  setting, not something inspectable via CLI. Verification pending your confirmation from
+  **Supabase Dashboard → Project Settings → Database → Backups**.
+- **Production deployment** — see below.
 
-**External integrations:** Hostinger (hosting/cron), GitHub (deployment).
+**Database objects:** One new migration
+(`supabase/migrations/20260822090000_phase8_hardening.sql`) — `error_logs` table + RLS, and the
+media bucket policy fix described above.
 
-**Dependencies on previous phases:** All previous phases (0–7).
+**Admin routes:** `/admin/settings/error-logs` (new).
 
-**Acceptance requirements:** Full QA governance framework above, applied retroactively across
-every previously closed phase (per Permanent Rule 8, Regression Rule).
+**External integrations:** None added. Hostinger/GitHub deployment itself remains untouched —
+see below.
 
-**Current status: NOT STARTED**
-Evidence: no hardening pass has been performed; current phase is still Phase 0.
+**Dependencies on previous phases:** All previous phases (0–7.1) — this phase hardens existing
+objects, adds no new business features.
+
+**Verification:**
+- `npm run lint` — clean (only pre-existing `<img>` warnings in untouched files).
+- `npm run build` — clean; `/admin/settings/error-logs` compiles and appears in the route
+  manifest.
+- `npx supabase migration list` — local == remote, all 15 migrations.
+- Targeted browser verification (three throwaway accounts — Super Admin ×2, Sales Staff ×1 —
+  created/used/deleted, cleanup confirmed via direct `SELECT` returning zero rows each time):
+  covered above per hardening item. Zero console errors throughout.
+
+**Bugs:** None found beyond the gaps this phase exists to fix. No regression to any prior phase
+— the only touched files are the ones listed above, and the raster media-upload path (unchanged
+code) was explicitly re-verified working.
+
+**Git and deployment state:** Code committed in two commits (`feat: ...` then `docs: ...`,
+matching every prior phase's pattern) — see commit hashes in "Current Next Action" below. **Not
+pushed.** Local `master` remains ahead of `origin/master` by everything since Phase 5 plus this
+phase's work. Production deployment is deliberately **not** part of this pass: it is not a small
+Phase-8-only push — it would be the first time five phases of work reach GitHub/Hostinger at
+all — so it stays a separate, explicitly-confirmed step requiring (a) your go-ahead specifically
+for that push, and (b) confirmation of how Hostinger's auto-deploy is currently wired (which
+branch, staging vs. production), neither of which this pass assumed.
+
+**Current status: IMPLEMENTATION COMPLETE (hardening scope) — NOT CLOSED, DEPLOYMENT NOT
+STARTED.** Not fully closed because WhatsApp delivery testing remains genuinely blocked on
+external credentials (unchanged from Phase 4) and database-backup verification awaits your
+dashboard confirmation — both stated plainly rather than glossed over. Production deployment is
+a deliberately separate, not-yet-authorized step. This mirrors exactly how Phase 4 has been
+carried all along, and keeps "do not push unfinished work to production" intact.
 
 ---
 
@@ -1543,7 +1649,9 @@ Phase 0 (CLOSED) → Phase 1 (CLOSED) → Phase 2 (CLOSED) → Phase 3 (CLOSED) 
 Phase 3.5 (CLOSED) → Phase 4 (IN PROGRESS — QA INCOMPLETE) → Phase 5 (CLOSED) →
 Phase 6 (CLOSED — Packages/Destinations permanently excluded, see Phase 6 section) →
 Phase 7 (CLOSED — Booking/Conversion/Package/Destination/Staff reports excluded, see Phase 7
-section) → Phase 7.1 (COMPLETE — admin UX/branding/auto-logout, see Phase 7.1 section) → Phase 8
+section) → Phase 7.1 (COMPLETE — admin UX/branding/auto-logout, see Phase 7.1 section) →
+Phase 8 (IMPLEMENTATION COMPLETE, hardening scope — NOT CLOSED, deployment not started, see
+Phase 8 section)
 
 ## Current Next Action
 
@@ -1629,4 +1737,22 @@ trigger wasn't directly fired-and-observed (Playwright's tabs share one cookie j
 independent devices) — the mechanism itself is standard, documented Supabase SDK behavior, not
 custom logic.
 
-Phase 8 remains **not started**.
+Phase 8 — Production Hardening — is now **IMPLEMENTATION COMPLETE (hardening scope)**, not
+closed. Security headers, login rate limiting, timing-safe cron secret comparison, SVG upload
+sanitization, an in-house error log + viewer, a symmetric logout audit entry, and the Phase
+2-deferred media bucket policy drift are all implemented and verified — see the Phase 8 section
+above for the full detail, including exactly what was verified against real data (not just code
+inspection) for each item. `npm run lint`, `npm run build`, and `npx supabase migration list`
+(local == remote, all 15 migrations) are clean.
+
+WhatsApp delivery testing remains genuinely blocked on Meta credentials, unchanged from Phase 4.
+Database-backup verification awaits your confirmation from the Supabase dashboard. Production
+deployment is deliberately not part of this pass: local `master` was found to be 16 commits
+ahead of `origin/master` (everything since Phase 5 has only ever been committed locally), so
+pushing is not a small Phase-8-only action — it needs its own explicit go-ahead plus
+confirmation of how Hostinger's auto-deploy is currently wired, neither of which this pass
+assumed.
+
+Commits: `2826a7e` (feat: implement phase 8 production hardening), plus this closure
+documentation update. Nothing pushed to any remote; production (`https://connectmytours.com`)
+untouched.
