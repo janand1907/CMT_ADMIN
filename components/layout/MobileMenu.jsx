@@ -18,6 +18,7 @@ export default function MobileMenu({ navLinks, onNavigate }) {
                     href={item.href}
                     onClick={onNavigate}
                     className="flex-1 rounded-lg px-3 py-2 font-medium text-neutral-700"
+                    {...(item.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                   >
                     {item.label}
                   </Link>
@@ -39,6 +40,7 @@ export default function MobileMenu({ navLinks, onNavigate }) {
                           href={child.href}
                           onClick={onNavigate}
                           className="block rounded-lg px-3 py-2 text-sm text-neutral-600"
+                          {...(child.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                         >
                           {child.label}
                         </Link>
@@ -48,7 +50,12 @@ export default function MobileMenu({ navLinks, onNavigate }) {
                 )}
               </div>
             ) : (
-              <Link href={item.href} onClick={onNavigate} className="block rounded-lg px-3 py-2 font-medium text-neutral-700">
+              <Link
+                href={item.href}
+                onClick={onNavigate}
+                className="block rounded-lg px-3 py-2 font-medium text-neutral-700"
+                {...(item.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              >
                 {item.label}
               </Link>
             )}

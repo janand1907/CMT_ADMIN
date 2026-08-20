@@ -60,6 +60,7 @@ export default function Navbar({ links }) {
                 <Link
                   href={item.href}
                   className="py-2 font-medium text-secondary-500 hover:text-primary-600"
+                  {...(item.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 >
                   {item.label}
                 </Link>

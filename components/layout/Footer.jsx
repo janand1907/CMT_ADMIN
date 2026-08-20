@@ -47,7 +47,11 @@ export default function Footer({ links }) {
           <ul className="mt-5 space-y-2.5 text-sm text-white/80">
             {quickLinks.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="transition hover:text-white">
+                <Link
+                  href={link.href}
+                  className="transition hover:text-white"
+                  {...(link.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                >
                   {link.label}
                 </Link>
               </li>

@@ -1161,11 +1161,21 @@ testimonials/banners/menus/`seo_metadata`).
   SEO title fallback, then deleted the test row — confirmed gone via a direct `SELECT` (empty
   result), zero permanent database change.
 
+**`open_in_new_tab` (2026-08-20, reconciliation pass):** The Phase 5 admin menu editor
+(`app/admin/(protected)/cms/menus/[id]/MenuItemsManager.jsx`, already closed/authoritative)
+exposes a working "open in new tab" toggle to staff — so a Content Manager can set it today and
+would reasonably expect it to take effect. The master plan itself never names this field, but
+leaving it unwired would mean a real, staff-configured setting silently does nothing on the live
+site, which is a correctness gap in "integrate CMS menu_items faithfully," not new scope. Fixed
+by conditionally spreading `{ target: "_blank", rel: "noopener noreferrer" }` onto the `<Link>`
+in all four places menu items render (`Navbar.jsx`, `NavDropdown.jsx` parent + children,
+`MobileMenu.jsx` top-level + children, `Footer.jsx` quick links) — the same pattern already used
+for the existing WhatsApp CTA link. Static `data/nav.js` entries have no `openInNewTab` field, so
+they're unaffected (verified via curl: no `target="_blank"` attribute appears on the existing
+"Plan My Trip" link). `npm run lint` and `npm run build` both clean after this change.
+
 **Known gaps (not blocking, documented rather than silently dropped):**
 - Packages/Destinations integration: entirely deferred, per the user decision above.
-- `open_in_new_tab` on CMS menu items isn't wired into `Navbar`/`NavDropdown`/`MobileMenu`'s
-  `<Link>` rendering yet — irrelevant today since no CMS menu exists, but should be picked up
-  before a real header/footer menu with external links is published.
 - Pages fully served by a static route folder (e.g. `/about-us`, `/contact-us`) render through
   the root layout too, so a CMS header/footer menu change would appear there only after the next
   redeploy (60s ISR on the 5 CMS-integrated routes; static-only pages have no revalidate window).

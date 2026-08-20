@@ -26,6 +26,7 @@ export default function NavDropdown({ item }) {
         <Link
           href={item.href}
           className="py-2 font-medium text-secondary-500 hover:text-primary-600"
+          {...(item.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         >
           {item.label}
         </Link>
@@ -66,6 +67,7 @@ export default function NavDropdown({ item }) {
               role="menuitem"
               onClick={() => setOpen(false)}
               className="block rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-700"
+              {...(child.openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             >
               {child.label}
             </Link>
