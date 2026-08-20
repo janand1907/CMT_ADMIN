@@ -1347,18 +1347,35 @@ objectives: compact navigation, fix auto-logout/session expiration, use the orig
 the existing theme color consistently. No Phase 7 report calculations/metrics/permissions were
 touched.
 
-**Navigation:** `components/admin/AdminShell.jsx` — nav item padding `px-3 py-2` → `px-2.5 py-1.5`,
-section gaps `space-y-6` → `space-y-4`, section-header text `text-xs` → `text-[11px]`. Active
-state changed from a flat `bg-primary-50` tint to the same tint plus a `border-l-2 border-primary-600`
-left-accent indicator (a layout idea taken from the attached Supabase screenshots — the accent
-color itself is ConnectMyTours' own `primary-600`, not Supabase's). Sidebar width `w-64` → `w-60`.
-All existing routes/sections/permission-based filtering are unchanged — `navConfig.js` was not
-touched at all, so nothing was removed or re-permissioned. Verified: all 8 sections and every
-route render identically to before, mobile menu opens/closes/scrolls/auto-closes-on-navigate
-correctly, and `/admin/reports/leads` still renders the exact same data as Phase 7 (2 leads,
-matching every breakdown) — confirming zero regression. No collapsed/expandable sidebar was
-added — out of scope per the explicit "do not overengineer" instruction; the objective was
-density, not a new interaction model.
+**Navigation (superseded/corrected within this same sub-task):** the first pass compacted the
+existing full-width labeled sidebar (tighter padding/gaps). A follow-up correction replaced that
+with the actually-intended two-level architecture on desktop: a narrow 56px icon rail
+(`components/admin/AdminShell.jsx`'s `DesktopNav`) showing one icon per `NAV_SECTIONS` group, with
+a hover-revealed flyout panel listing that group's routes. The active group is always highlighted
+on the rail (independent of hover, via matching the current pathname against every item's href);
+a hovered-but-inactive icon gets a lighter gray highlight. The flyout is `position: absolute`, not
+part of the flex layout, so it overlays the main content without ever resizing/reflowing it. The
+"hover gap" flicker bug is avoided structurally, not with a timeout: the flyout is a DOM
+descendant of the same wrapper the rail icons live in (`onMouseLeave` on that one wrapper), so
+moving the pointer from an icon into the panel never actually leaves the wrapper's subtree —
+directly verified with a scripted continuous mouse-move from icon to a panel link (stayed open),
+a click-through (navigated correctly, active state updated), and a move-away-entirely (panel
+closed). Eight new icons were added to the existing hand-rolled `components/icons.jsx` set (no
+icon library dependency) and are referenced from `navConfig.js` by string key, not component
+reference — a real bug was caught and fixed here: `navConfig.js`'s `NAV_SECTIONS` crosses the
+Server Component (`AdminNav.jsx`) → Client Component (`AdminShell.jsx`) prop boundary, and React
+Server Components cannot serialize a function reference across that boundary ("Functions cannot
+be passed directly to Client Components") — this only surfaced at runtime (13 console errors),
+not during `npm run build`, since build doesn't render authenticated dynamic routes with real
+session data. Mobile is untouched by any of this — it keeps its own separate, already-working
+tap-based drawer with full labeled sections (hover has no touch equivalent), per the explicit
+instruction not to force the desktop interaction onto mobile. All existing routes/permission
+filtering are unchanged; `filterNavSections`'s existing per-section/per-item logic was not
+touched. Verified end-to-end with a throwaway Super Admin account (created, used, deleted,
+cleanup confirmed via `SELECT`): all 8 icons render with correct icons/labels, hover/click/leave
+behavior all confirmed via scripted mouse control (not just visual inspection), `/admin/cms/pages`
+renders its existing Phase 5 content with zero regression after flyout navigation, and the mobile
+drawer still opens/scrolls/navigates correctly.
 
 **Branding:** `public/logo.svg` — the same original asset already used on the public site's
 Navbar/Footer, not a new or regenerated logo — added to the sidebar header (desktop + mobile) via
@@ -1418,9 +1435,12 @@ disproportionate effort for this fix given the mechanism itself (`onAuthStateCha
 behavior, not custom logic. If this specific path ever needs empirical proof, it requires two
 separate browser contexts/profiles, not two tabs.
 
-**Bugs:** None found beyond the diagnosed auto-logout gap itself, which is the fix, not a
-regression. No Phase 7 regression: report pages, metrics, and `view_reports` permission gating
-are all unchanged and were re-confirmed rendering identical data during this session's testing.
+**Bugs:** One real bug found and fixed during the navigation correction — `navConfig.js` storing
+icon component references directly, which broke at runtime (13 console errors, `npm run build`
+didn't catch it) because a function can't cross the Server→Client Component prop boundary. Fixed
+by storing string keys and resolving them to components inside the Client Component. No other
+bugs. No Phase 7 regression: report pages, metrics, and `view_reports` permission gating are all
+unchanged and were re-confirmed rendering identical data during this session's testing.
 
 **Current status: COMPLETE ✅**
 
