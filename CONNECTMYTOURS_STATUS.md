@@ -1482,6 +1482,26 @@ row today and the "Confirmed Bookings" KPI card already surfaces the only meanin
 No charting library was added; all four remain plain SVG/CSS. No new business metrics — every
 chart groups fields already fetched for the existing KPI cards.
 
+**Second correction — CSS-only rail expansion, click navigates to first item (same sub-task):**
+Direct user feedback after seeing the previous pass live: the "whole rail expands" mechanism was
+built as a second, JS-conditionally-mounted `<div>` popping in on top of the rail — visually read
+as "a new panel opening," not the rail itself growing. Rebuilt as one persistent rail element: a
+fixed-width (80px) `position: relative` wrapper reserves real flex-layout space, containing one
+`position: absolute` div (same origin) whose own Tailwind classes are `w-20 hover:w-32
+transition-all duration-200` — pure CSS `:hover`, zero `onMouseEnter`/`onMouseLeave` state. Icon
+labels are permanently in the DOM (not conditionally rendered), clipped by `overflow-hidden` at
+80px and revealed via `group-hover:opacity-100` as the rail widens. Since there's only one DOM
+tree now, the previous pass's `aria-hidden`/`inert` workaround (needed only because two
+same-labelled buttons existed at once) is gone — removed, not just superseded. Also finalized per
+this feedback: clicking a rail icon now navigates directly to that group's first submenu item
+(`section.items[0].href`, a real `<Link>`) instead of only pinning the permanent submenu without
+navigating; the submenu then updates itself via the existing pathname-sync effect, needing no
+separate click-handler logic. Verified precisely: the rail's own bounding box measured 80px before
+hover and 128px during hover at the identical `x/y` origin (same element, not a new one), the
+Dashboard heading's position was byte-identical before/during hover (zero content shift), and
+clicking CRM navigated to `/admin/crm/leads` with both the rail icon and the Leads submenu item
+correctly shown active afterward.
+
 **Current status: COMPLETE ✅**
 
 ---
