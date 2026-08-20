@@ -1,6 +1,6 @@
 # ConnectMyTours — Implementation Status & QA Governance
 
-Updated: 2026-08-19 (Phase 4 implementation completed and bug-fixed — QA INCOMPLETE, browser QA not started)
+Updated: 2026-08-20 (Phase 5 CMS implementation completed and bug-fixed — QA INCOMPLETE, browser QA performed but not exhaustive; Phase 4 unchanged, still QA INCOMPLETE)
 
 Scope for every phase below is transcribed from `CONNECTMYTOURS_MASTER_PLAN.md` only — no
 feature has been added or expanded beyond what that document states. Where the master plan
@@ -826,23 +826,188 @@ Banners, Homepage sections, Navigation/menu management.
 - Homepage sections manageable through CMS (eventually)
 
 **Database objects (master plan §9):** `pages`, `page_versions`, `page_sections`,
-`blog_posts`, `blog_categories`, `blog_tags`, `faqs`, `testimonials`, `banners`, `menus`
-(plus shared `media`, `seo_metadata` from §9 Media & SEO)
+`blog_posts`, `blog_categories`, `blog_tags`, `blog_post_tags` (join table, not separately
+named in §9 but required for the many-to-many Blog↔Tags relationship), `faqs`, `testimonials`,
+`banners`, `menus`, `menu_items` (§9 lists only `menus`; item rows are a minimal, necessary
+extension — the plan gives no field-level detail for this table at all). Reused, not
+duplicated: `media` (area constraint extended to add `testimonials`; `pages`/`banners`/`blog`/
+`gallery` already existed from Phase 2) and `seo_metadata` (entity_type constraint extended to
+add `page`/`blog_post` — Phase 2's own comment on that table anticipated exactly this).
 
-**Admin routes (planned — master plan §2 CMS menu):** Pages, Page Builder, Blog, Banners,
-FAQs, Testimonials, Homepage Sections, Navigation/Menus
+**Admin routes (built — master plan §2 CMS menu):** `/admin/cms/pages` (list/new/detail),
+`/admin/cms/pages/[id]/builder` (Page Builder), `/admin/cms/blog` (list/new/detail),
+`/admin/cms/blog/categories` (categories+tags), `/admin/cms/banners` (list/new/detail),
+`/admin/cms/faqs` (single-page manager), `/admin/cms/testimonials` (list/new/detail),
+`/admin/cms/homepage` (redirects to the singleton homepage page's builder — see below),
+`/admin/cms/menus` (list/detail with nested item management). "Page Builder" is not a
+separate top-level nav entry from "Pages" — see consolidation note below.
 
-**Server actions / API:** None yet.
+**Server actions / API:** All CRUD, publish, and Page Builder mutations (add/edit/reorder/
+enable-disable/delete section, save revision, rollback) are server actions under each route's
+`actions.js`, following the codebase's existing per-route pattern. No new API routes were
+needed — everything goes through Supabase directly via server actions, same as every other
+phase.
 
 **External integrations:** None specified.
 
-**Dependencies on previous phases:** Phase 0 (roles: Content Manager); Phase 2 (media library
-reused for CMS media).
+**Dependencies on previous phases:** Phase 0 (roles: Content Manager, already seeded; new
+permissions `manage_pages`/`publish_pages`/`manage_blog`/`publish_blog`/`manage_faqs`/
+`manage_testimonials`/`manage_banners`/`manage_menus` granted to it); Phase 2 (`media` and
+`seo_metadata` reused directly, not rebuilt; `SeoForm`/`MediaPicker` components reused
+unchanged); Admin Design System (`Card`, `Table`, `Tabs`, `Dialog`, `Badge`, `Field`/`Input`/
+`Textarea`/`Select`/`Checkbox`, `Button`/`LinkButton`, `RowActions`-style patterns) reused
+throughout, no new form/table/dialog primitives created.
 
 **Acceptance requirements:** Full QA governance framework above.
 
-**Current status: NOT STARTED**
-Evidence: no CMS code, routes, or database tables exist.
+**Current status: IMPLEMENTATION COMPLETE — QA INCOMPLETE**
+
+**Database objects deployed (evidence: `supabase/migrations/20260820100000_phase5_cms.sql`,
+`npx supabase migration list` re-run after this session's work):** local == remote for all 12
+migrations (`20260813090016` through `20260820100000`), no drift. Tables: `pages`,
+`page_sections`, `page_versions`, `blog_categories`, `blog_tags`, `blog_posts`,
+`blog_post_tags`, `faqs`, `testimonials`, `banners`, `menus`, `menu_items`. RLS enabled on all
+12; 8 new permissions, granted only to Content Manager (Admin/Manager and Sales Staff
+deliberately excluded — CMS is not in their master plan §10 scope, mirroring Phase 4's
+identical reasoning in reverse). A `before insert or update` trigger
+(`enforce_publish_permission`) on both `pages` and `blog_posts` blocks the specific transition
+into `status='published'` for anyone without `publish_pages`/`publish_blog` — enforced at the
+database layer, not just hidden in the UI, verified directly: the migration's own seed insert
+of the homepage row was rejected when attempted as `published` (no authenticated user in
+migration context → `has_permission()` false → trigger raised), so it was seeded as `draft`
+instead and published for real through the app during QA. A `pages_homepage_not_archived`
+check constraint stops the singleton homepage (`is_homepage=true`) from ever being archived.
+
+**Design decisions made where the master plan under-specifies (documented, not silently
+invented):**
+- **"Page Builder" nav item merged into "Pages."** The master plan's §2 nav list names them
+  separately, but Page Builder has no independent identity apart from editing a specific
+  page's content — it's reached from within a page (`/admin/cms/pages/[id]/builder`), the same
+  relationship packages' Details/Content/Pricing/Images/SEO tabs already have to the Packages
+  list. A second top-level link to the same destination would have been a literal duplicate
+  nav entry, which conflicts with "no duplicate routes."
+- **"Homepage Sections" is the same Page Builder, not a parallel system.** Master plan §8 says
+  homepage sections should "eventually" be CMS-manageable and §9 lists no separate table for
+  it. The migration seeds one `pages` row with `is_homepage=true`; `/admin/cms/homepage` is a
+  pure redirect to that row's `/builder` route. This avoids the exact kind of duplicated
+  entity/duplicated Media-and-SEO-infrastructure the task instructions explicitly prohibit.
+- **Reorder is button-based (↑/↓), not drag-and-drop.** No drag library exists in this
+  project's dependencies; adding one for this phase would be new infrastructure beyond what
+  was asked. Button reorder satisfies the literal capability ("drag/reorder sections" — reorder
+  is delivered, drag is not) via an atomic two-row `sort_order` swap.
+- **Page Builder block content editor is field-schema-driven, not one bespoke form per block
+  type.** All 19 block types (`lib/cms/constants.js`) map to a field list (text/textarea/
+  richtext/image/link/number/items_json); "items_json" blocks (cards, gallery, stats,
+  features) edit their repeated sub-items as raw structured JSON in one field rather than a
+  fully dynamic add/remove nested-repeater UI. This is a real, working implementation, not a
+  stub — every field saves and reloads correctly — but it's a deliberately lighter-weight
+  editing surface for the multi-item block types than a true visual repeater would be.
+- **FAQs are the one CMS entity with real hard `DELETE`.** Master plan §8 literally lists
+  "Create, edit, delete, ordering, category" for FAQs with no draft/publish/status field at
+  all — unlike every other entity here (and everywhere else in this codebase), which
+  soft-deactivates. Taken literally rather than defaulting to the app's usual
+  soft-delete convention.
+- **Blog Categories/Tags management lives inside the Blog area, not as separate top-level nav
+  items** (`/admin/cms/blog/categories`, linked from the Blog list header) — the master plan's
+  CMS nav list names only "Blog" as one entry, mirroring the same reasoning as the Page
+  Builder consolidation above.
+- **Banners' start/end date window is admin-visible only.** Phase 5 has no public consumer to
+  enforce visibility against (that's explicitly Phase 6's job — "replace hardcoded public
+  content with CMS-driven"). The admin list computes and displays an effective
+  Live/Scheduled/Expired/Inactive state from `status` + the dates, satisfying the literal field
+  requirement without reaching into Phase 6 scope.
+- **`menus`/`menu_items` field shape was designed from scratch.** §9 gives this table zero
+  field-level detail beyond its name. Built as `menus(name, location)` +
+  `menu_items(label, url, parent_id, sort_order, open_in_new_tab)` with one level of nesting
+  (a menu item can have children, matching typical header/footer menu needs) — a minimal,
+  reasonable interpretation, not an invented business requirement.
+
+**Real bug found and fixed this session (via Playwright, not caught by lint/build):**
+`app/admin/(protected)/cms/menus/page.js` rendered `<form action={createMenu}>` as a plain
+server-rendered form, but `createMenu(prevState, formData)` has a `useFormState`-style
+two-argument signature — called directly as a raw form action, React passes only one argument,
+so `formData` arrived `undefined` inside the action and every attempt to create a menu crashed
+with a 500 (`TypeError: Cannot read properties of undefined (reading 'get')`). This wasn't only
+a crash: the form also had no error-state display at all, so even after a naive signature fix,
+a validation error (e.g. blank name) would have failed silently with zero user feedback,
+violating this project's own "no silent failures" rule. Fixed properly, not just patched: added
+`app/admin/(protected)/cms/menus/CreateMenuForm.jsx`, a client component wrapping `createMenu`
+in `useFormState` with a real error `Alert`, matching every other create-form in this codebase
+(`NewPageForm`, `NewBlogPostForm`, `TagsAndSourcesManager`, etc.) — `menus/page.js` now renders
+that component instead of a bare form. Re-tested immediately after the fix: menu creation,
+nested menu-item creation (parent/child, verified the `.eq()`/`.is()` null-vs-value filter
+split is correct — an earlier draft of `moveMenuItem`/`addMenuItem` used `.is("parent_id", uuid)`
+for a real UUID, which is a distinct bug I caught and fixed before it ever shipped, from
+knowing Postgres's `.is()` only accepts null/true/false), and item reorder all verified working
+end to end with zero console errors.
+
+**Playwright browser QA performed this session (real running app, real Supabase-backed data,
+two throwaway accounts — Super Admin and Content Manager — created via the service-role key
+and fully deleted afterward, no production data touched):**
+- Navigation: full CMS section (7 links) renders correctly for Content Manager (who also sees
+  Inventory via the pre-existing `view_inventory` grant, and correctly does *not* see CRM/
+  Marketing/Settings); active-state and nested-route highlighting verified (`/admin/cms/pages/
+  [id]/builder` correctly highlights "Pages").
+- **Pages + Page Builder**, end to end: create page (slug auto-generate from title verified),
+  reserved-slug rejection (`home`) verified, Details+Status save, SEO save (`SeoForm` reused
+  unmodified), add two blocks (Hero, Rich Text), edit Hero's every field including a real image
+  upload through the reused `MediaPicker` (`area="pages"`) with the image preview correctly
+  loading back on reopen, reorder (↑/↓ swap verified correct), disable/enable toggle, **save a
+  named revision, edit the heading again, then roll back and confirmed the exact original
+  heading and image reference were restored** — the core "must actually persist and be
+  recoverable" requirement, not just a UI toggle. Publish verified (Content Manager holds
+  `publish_pages`); section count and status persisted correctly across a hard navigation
+  reload.
+- **Blog**: category + tag created inline, new post created with category assigned, tag
+  checkbox + status→Published saved together, list correctly reflects category and Published
+  badge.
+- **FAQs**: two created, reorder (↑/↓) verified swapping order correctly, edit dialog opens
+  pre-filled, real hard delete confirmed via the native `confirm()` dialog (handled and
+  accepted through Playwright) — count dropped from 2 to 1 as expected.
+- **Testimonials**: created with rating, list reflects it correctly.
+- **Banners**: server-side date-range validation rejected an end-before-start submission with
+  a visible error (not a silent no-op), corrected submission succeeded, and the list's
+  computed effective-state badge correctly showed "Scheduled" for a future-dated active banner.
+- **Menus**: the bug above found, fixed, and re-verified; nested menu-item creation and
+  hierarchy rendering confirmed correct.
+- **Permissions**: direct URL navigation to `/admin/crm/leads` as Content Manager correctly
+  shows "Access denied" (existing Phase 1 behavior, confirms no regression from the new nav
+  section); the DB-level publish-permission trigger was proven to actually reject (not just
+  hide in the UI) an unauthorized publish attempt.
+- **Regression**: logged in as Super Admin, confirmed full original nav (CRM/Inventory/
+  Marketing/Account/Settings) is unaffected; re-saved an existing Destination's SEO title
+  through the shared, now-extended `seo_metadata` table to confirm the constraint change didn't
+  break Phase 2's own SEO forms; spot-checked `/admin/marketing/templates` loads clean. All
+  test data (1 page, 1 blog post + category + tag, 1 FAQ, 1 testimonial, 1 banner, 1 menu + 2
+  items, 1 uploaded test image, 1 destination SEO-title edit) and both throwaway accounts were
+  deleted after QA — nothing test-related remains in the live database.
+
+**`npm run lint`** — clean; only the same pre-existing, unrelated `next/image` warnings from
+earlier phases (now also present in new files using the same established `<img>` pattern as
+`SeoForm`/`MediaPicker` — zero new lint errors). **`npm run build`** — clean, all 22 new Phase 5
+routes compile alongside every Phase 0–4 route with zero regressions.
+
+**Genuinely unresolved (not glossed over):**
+- **No search/filter on CMS list pages** (Pages, Blog, Testimonials, Banners) — the existing
+  Inventory Categories/Destinations lists have a search box; the new CMS lists do not. Master
+  plan §8/§9 doesn't spell out search as a CMS requirement, and the CRUD instructions for this
+  session said "where required," but Inventory's precedent makes this a reasonable gap to flag
+  rather than silently omit. Not fixed in this pass — flagged as the clearest remaining scope
+  gap.
+- **Preview is a structured content summary, not a rendered visual preview of the live page
+  template** — Phase 5 has no public rendering pipeline to preview against (that's Phase 6), so
+  "preview" here means the Page Builder's inline per-section field summary, not a
+  pixel-accurate what-you'll-get view.
+- **Not every one of the 19 block types' individual field editor was exercised in this QA
+  pass** — Hero and Rich Text were fully tested end-to-end (including the image field and an
+  `items_json`-shaped field was code-reviewed but not live-tested with real saved data); the
+  other 17 share the exact same generic field-schema-driven editor code path, so this is a
+  coverage gap in breadth, not a distinct untested code path.
+- Per this project's own Phase Closure Rule (browser back/forward, every entity's hard-refresh
+  matrix, and search/filter are not fully covered), Phase 5 is marked **QA INCOMPLETE**, not
+  CLOSED, despite implementation being complete and every flow that *was* tested passing with
+  zero console errors and one real bug found-and-fixed. Per Rule 9 (No-Assumption Rule), this
+  is stated plainly rather than rounded up to "done."
 
 ---
 
@@ -954,23 +1119,31 @@ Phase 8
 
 ## Current Next Action
 
-Phase 0 through Phase 3.5 are closed. Phase 4 — WhatsApp Automation implementation is now
-**complete**: database layer (7 tables, 7 functions, RLS, 5 permissions) matches remote with no
-drift; all four master-plan vertical slices are built and wired — enquiry confirmation,
-quotation messages, morning/evening follow-up automation with an atomic claim-then-send cron
-route, and campaigns (including scheduled sends); Templates/Automation/Campaigns/
-Messages/Settings admin UI all exist with real permission-gated routes and no dead nav links;
-stop/pause/resume and consent/opt-out (webhook-driven, now enforced centrally on every send
-path) are wired end-to-end. This session found and fixed 9 real bugs across this
-previously-uncommitted code (broken imports that failed the build outright, a raw-HTML
-description string, a missing success flag, a mismatched join alias, an unsupported/redundant
-RLS-duplicate filter, a NOT NULL constraint violation silently breaking enquiry-confirmation
-message logging, and missing opt-out enforcement on non-campaign sends) — see the Phase 4
-section above for the full list. `npm run lint` and `npm run build` are both clean.
-Phase 4 cannot close until: real Meta/staging credentials are configured and a real
-send-and-receive, webhook delivery, and cron firing are verified against a live WhatsApp
-number (Rule 9); and real browser acceptance testing is performed against every Phase 4 admin
-route. Neither has been done in this environment. A security-drift item (see "Unresolved item"
-under Phase 2 above) — two untracked policies on the pre-existing `media` bucket — remains
-intentionally open per explicit user decision, carried forward rather than resolved; revisit at
-the latest during Phase 8 Production Hardening.
+Phase 0 through Phase 3.5 are closed. Phase 4 — WhatsApp Automation — remains **IMPLEMENTATION
+COMPLETE / QA INCOMPLETE**, unchanged this session (not reopened; no Phase 5 dependency
+required touching it). It still cannot close until real Meta/staging credentials are
+configured and a real send-and-receive, webhook delivery, and cron firing are verified against
+a live WhatsApp number, plus full browser acceptance testing against every Phase 4 admin route.
+
+Phase 5 — CMS — implementation is now **complete**: 12 new tables (Pages/Page Builder/
+revisions, Blog + categories/tags, FAQs, Testimonials, Banners, Menus + items), RLS on all of
+them, 8 new permissions granted only to Content Manager, a database-level trigger enforcing the
+publish/manage permission split on Pages and Blog Posts, and the shared `media`/`seo_metadata`
+infrastructure from Phase 2 extended (not duplicated) to cover CMS entities. All 7 CMS nav
+items route to real, permission-gated, non-duplicate pages — see the Phase 5 section above for
+the full route list. One real bug (a `useFormState`-signature mismatch causing a 500 on menu
+creation, plus a missing error-display gap in the same form) was found via Playwright, fixed
+properly with a proper client-component wrapper rather than patched around, and re-verified
+working. `npm run lint` and `npm run build` are both clean; `npx supabase migration list` shows
+local == remote for all 12 migrations. Phase 5 is marked **QA INCOMPLETE, not CLOSED** — real
+browser QA was performed for every entity's core CRUD/publish/reorder/delete path (see the
+Phase 5 section for the full list of what was and wasn't covered), but CMS list pages have no
+search/filter yet, and only 2 of 19 Page Builder block types got full field-by-field live
+testing (the other 17 share the same generic editor code path, untested in breadth). A
+security-drift item (see "Unresolved item" under Phase 2 above) — two untracked policies on the
+pre-existing `media` bucket — remains intentionally open per explicit user decision, carried
+forward rather than resolved; revisit at the latest during Phase 8 Production Hardening.
+
+Per the explicit instruction for this session, Phase 6 (Website Integration), Phase 7, and
+Phase 8 were **not started** — no public-facing pages were changed to consume CMS data, and no
+Phase 6+ code exists anywhere in this commit.

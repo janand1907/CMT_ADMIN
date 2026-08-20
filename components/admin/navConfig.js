@@ -50,6 +50,18 @@ export const NAV_SECTIONS = [
     ],
   },
   {
+    label: "CMS",
+    items: [
+      { href: "/admin/cms/pages", label: "Pages", permission: ["manage_pages", "publish_pages"] },
+      { href: "/admin/cms/blog", label: "Blog", permission: ["manage_blog", "publish_blog"] },
+      { href: "/admin/cms/banners", label: "Banners", permission: "manage_banners" },
+      { href: "/admin/cms/faqs", label: "FAQs", permission: "manage_faqs" },
+      { href: "/admin/cms/testimonials", label: "Testimonials", permission: "manage_testimonials" },
+      { href: "/admin/cms/homepage", label: "Homepage Sections", permission: ["manage_pages", "publish_pages"] },
+      { href: "/admin/cms/menus", label: "Navigation / Menus", permission: "manage_menus" },
+    ],
+  },
+  {
     label: "Marketing",
     items: [
       {
