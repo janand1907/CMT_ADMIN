@@ -2,17 +2,15 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import { updatePassword } from "./actions";
+import { Field, Input } from "@/components/admin/ui/FormControls";
+import { Button } from "@/components/admin/ui/Button";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-lg bg-gray-900 px-4 py-2 font-medium text-white disabled:opacity-50"
-    >
+    <Button type="submit" loading={pending} className="w-full">
       {pending ? "Updating..." : "Update password"}
-    </button>
+    </Button>
   );
 }
 
@@ -27,33 +25,13 @@ export default function ResetPasswordForm() {
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       )}
 
-      <div className="space-y-1">
-        <label htmlFor="password" className="text-sm font-medium text-gray-700">
-          New password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          minLength={8}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-        />
-      </div>
+      <Field label="New password" htmlFor="password">
+        <Input id="password" name="password" type="password" required minLength={8} />
+      </Field>
 
-      <div className="space-y-1">
-        <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-          Confirm new password
-        </label>
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          required
-          minLength={8}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-        />
-      </div>
+      <Field label="Confirm new password" htmlFor="confirmPassword">
+        <Input id="confirmPassword" name="confirmPassword" type="password" required minLength={8} />
+      </Field>
 
       <SubmitButton />
     </form>
