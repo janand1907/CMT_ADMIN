@@ -34,7 +34,7 @@ function sectionIsActive(pathname, section) {
 //   Layer A — the icon rail is ONE persistent element (not a second panel
 //   that mounts on hover). Its own width transitions on :hover, in pure CSS
 //   (Tailwind's hover:/group-hover: variants, no onMouseEnter/Leave state) —
-//   80px collapsed, 128px on hover, revealing the label spans that are
+//   56px (w-14) collapsed, 208px (w-52) on hover, revealing the label spans that are
 //   always in the DOM, just clipped by overflow-hidden until it widens. It's
 //   position:absolute inside a fixed-width reserved wrapper, so growing it
 //   never affects the permanent submenu/content's layout.
@@ -103,8 +103,8 @@ function DesktopNav({ sections, selectedLabel }) {
       {/* Reserves a fixed 80px in the real flex layout — the inner div's
           hover-expanded width is position:absolute, so it never resizes
           this wrapper and never pushes the permanent submenu/content. */}
-      <div className="relative w-20 shrink-0">
-        <div className="group absolute inset-y-0 left-0 z-30 flex w-20 flex-col gap-1 overflow-hidden border-r border-gray-200 bg-white py-3 shadow-none transition-all duration-200 ease-out hover:w-32 hover:shadow-card">
+      <div className="relative w-14 shrink-0">
+        <div className="group absolute inset-y-0 left-0 z-30 flex w-14 flex-col gap-1 overflow-hidden border-r border-gray-200 bg-white py-3 shadow-none transition-all duration-200 ease-out hover:w-52 hover:shadow-card">
           {sections.map((section) => (
             <RailRow key={section.label} section={section} isSelected={selectedLabel === section.label} />
           ))}
