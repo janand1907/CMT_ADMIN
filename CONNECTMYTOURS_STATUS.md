@@ -1072,14 +1072,35 @@ browser acceptance testing, and regression testing of Phase 0–4. **Phase 5 = C
 content, in the order: Packages → Destinations → Pages → Blog → Homepage Sections → Other
 Content. Current public UI must remain visually stable during migration.
 
-**Scope decision (2026-08-20):** During discovery, the live public site's departure-city
-package landing pages (e.g. `/chennai/srivani-vip-break-darshan`) and one hardcoded package
-(`/kerala/temple-nature-trail`) were found to have no matching field in the master plan's
-Package schema and, in one case, no matching DB row at all — a genuine data-model ambiguity,
-not a guessable implementation detail. Per the explicit "stop and report ambiguity" instruction,
-this was raised directly to the user, who chose: **defer Packages/Destinations entirely, start
-with Pages/Blog/Homepage Sections/Other Content.** Packages/Destinations public integration is
-therefore explicitly out of scope for this pass — not an oversight.
+**Scope decision — Packages/Destinations excluded from Phase 6 (finalized 2026-08-20):** The
+master plan's entire Phase 6 text (§15) is: "Gradually replace hardcoded public content with
+CMS-driven content. Recommended order: Packages → Destinations → Pages → Blog → Homepage
+Sections → Other Content. The current public UI should remain visually stable during
+migration." It names no further Packages/Destinations requirement, and the master plan contains
+zero mentions of "departure city" or any of Chennai/Bangalore/Hyderabad anywhere — that concept
+comes entirely from the *existing hardcoded site*, not the master plan.
+
+Direct schema/data inspection (not assumption) found the real blocker: `destinations` (Phase 2,
+closed) has 5 rows — Chennai, Bangalore, Hyderabad (0 packages linked to any of them) plus
+Tirupati, Kerala (packages *are* linked). The table conflates true destinations with
+departure/marketing cities. Only 3 packages exist; two of them ("NRI Darshan Package," "Srivani
+VIP Break Darshan") each link to a single `destination_id = Tirupati`, but the live hardcoded
+site publishes each as two separate pages (`/chennai/...` and `/hyderabad/...`) — the schema's
+one-`destination_id`-per-package model has no way to represent a package marketed under two
+cities without either duplicate rows or a schema change. `/kerala/temple-nature-trail` (live)
+has zero matching package row at all — a content gap, not just a connection gap. This is a
+genuine data-modeling decision (how should city-based marketing pages relate to a
+destination-based package model?), not a guessable implementation detail.
+
+This was raised to the user twice: first during initial discovery (resulting in a "defer
+Packages/Destinations, start with the rest" sequencing decision), then again during this
+reconciliation pass, where it was made explicit that "defer" is a sequencing decision, not the
+same as authorizing Phase 6 to close without it — per this document's own Phase Closure Rule
+("all applicable layers pass: Requirements..."), and Packages/Destinations is a named
+master-plan Phase 6 item. The user then explicitly chose to **close Phase 6 now with
+Packages/Destinations permanently excluded from this phase's scope**, to be picked up later as
+its own dedicated initiative (its own data-model decision, not squeezed into Phase 6). This is a
+final scope decision, not an oversight or an open item silently carried forward.
 
 **Implementation (this session):**
 - **Pages:** `app/[slug]/page.js` — generic renderer for published, non-homepage CMS pages,
@@ -1174,21 +1195,33 @@ for the existing WhatsApp CTA link. Static `data/nav.js` entries have no `openIn
 they're unaffected (verified via curl: no `target="_blank"` attribute appears on the existing
 "Plan My Trip" link). `npm run lint` and `npm run build` both clean after this change.
 
-**Known gaps (not blocking, documented rather than silently dropped):**
-- Packages/Destinations integration: entirely deferred, per the user decision above.
+**Known gaps / explicitly excluded scope (not blocking closure, documented rather than silently
+dropped):**
+- **Packages/Destinations integration is permanently excluded from Phase 6**, per the finalized
+  user decision above — not built, no schema changes made, no departure-city functionality
+  invented. This is real outstanding master-plan work (§15 names it in Phase 6's recommended
+  order), but it requires its own data-modeling decision (how a destination-based package model
+  relates to the live site's city-based marketing pages) that was explicitly ruled out of this
+  phase's scope. Follow-up: a dedicated future initiative, not implicitly bundled into Phase 7 or
+  Phase 8 — whoever picks it up should start from the schema/data findings documented above
+  (`destinations` already contains Chennai/Bangalore/Hyderabad rows with zero packages linked;
+  `packages.destination_id` is one-to-many, not many-to-many; `/kerala/temple-nature-trail` has
+  no matching row at all) rather than re-deriving them.
 - Pages fully served by a static route folder (e.g. `/about-us`, `/contact-us`) render through
   the root layout too, so a CMS header/footer menu change would appear there only after the next
   redeploy (60s ISR on the 5 CMS-integrated routes; static-only pages have no revalidate window).
   Acceptable today since no CMS menu exists; worth widening `revalidate` to more static routes if
   navigation becomes genuinely CMS-managed later.
 
-**Current status: IMPLEMENTATION COMPLETE (Pages/Blog/Homepage Sections/FAQ/Testimonials/
-Banners/Navigation) / Packages+Destinations DEFERRED (user decision, documented above)**
+**Current status: CLOSED ✅**
 
-This is deliberately not marked CLOSED: the master plan's full Phase 6 order is six items long,
-and two of them (Packages, Destinations) are entirely unbuilt by explicit, user-approved
-decision, not oversight. Closure requires either building that slice in a follow-up session or a
-final, explicit user decision that Phase 6 is considered complete without it.
+Pages, Homepage Sections, Blog, FAQ, Testimonials, Banners, and Navigation/Menus are fully
+implemented, verified (lint/build/migration state/targeted curl verification/one real
+DB-confirmed content-rendering test), and committed. Packages/Destinations is explicitly and
+permanently excluded from this phase's scope by final user decision (not an open item silently
+carried forward) — see above for the full reasoning and the evidence a future initiative should
+start from. `npm run lint`, `npm run build`, and `npx supabase migration list` (local == remote,
+all 13 migrations) are clean.
 
 ---
 
@@ -1264,7 +1297,7 @@ Evidence: no hardening pass has been performed; current phase is still Phase 0.
 
 Phase 0 (CLOSED) → Phase 1 (CLOSED) → Phase 2 (CLOSED) → Phase 3 (CLOSED) →
 Phase 3.5 (CLOSED) → Phase 4 (IN PROGRESS — QA INCOMPLETE) → Phase 5 (CLOSED) →
-Phase 6 (IMPLEMENTATION COMPLETE — Packages/Destinations deferred, not CLOSED) → Phase 7 →
+Phase 6 (CLOSED — Packages/Destinations permanently excluded, see Phase 6 section) → Phase 7 →
 Phase 8
 
 ## Current Next Action
@@ -1298,17 +1331,27 @@ are all clean. A security-drift item (see "Unresolved item" under Phase 2 above)
 untracked policies on the pre-existing `media` bucket — remains intentionally open per explicit
 user decision, unrelated to Phase 5, carried forward to Phase 8 Production Hardening.
 
-Phase 6 — Website Integration — is now **IMPLEMENTATION COMPLETE for Pages, Blog, Homepage
-Sections, FAQ, Testimonials, Banners, and Navigation/Menus**, with Packages/Destinations
-explicitly deferred by user decision (see the Phase 6 section above for the full reasoning,
-implementation detail, verification performed, and known gaps). `npm run lint`, `npm run build`,
-and `npx supabase migration list` (local == remote, all 13 migrations) are clean. Targeted
-curl-based verification confirmed both the CMS and fallback rendering paths, 404 behavior for
-missing content, and the sitemap extension; one real end-to-end content-rendering test was run
-against the linked database (user-approved, fully reversible, confirmed cleaned up). Committed
-as `8c2ea6f` — "feat: implement phase 6 website integration". Phase 6 is **not** marked CLOSED:
-the master plan's Phase 6 scope includes Packages/Destinations, and that slice remains entirely
-unbuilt, so closure is pending either a follow-up session covering it or an explicit user
-decision to close Phase 6 without it.
+Phase 6 — Website Integration — is now **CLOSED**. Pages, Blog, Homepage Sections, FAQ,
+Testimonials, Banners, and Navigation/Menus are fully implemented and verified (see the Phase 6
+section above for full detail). `npm run lint`, `npm run build`, and `npx supabase migration
+list` (local == remote, all 13 migrations) are clean. Targeted curl-based verification confirmed
+both the CMS and fallback rendering paths, 404 behavior for missing content, and the sitemap
+extension; one real end-to-end content-rendering test was run against the linked database
+(user-approved, fully reversible, confirmed cleaned up). `open_in_new_tab` on CMS menu items —
+found unwired during a reconciliation pass, a real correctness gap since the Phase 5 admin
+editor already exposes it to staff — was implemented and verified.
+
+Packages/Destinations was reconciled explicitly against the master-plan text (which names no
+requirement beyond "Packages → Destinations" in Phase 6's recommended order, and contains no
+"departure city" concept at all) and against the actual schema/data (`destinations` conflates
+true destinations with unused departure-city rows; `packages.destination_id` is one-to-many, not
+many-to-many; one live package page has no matching DB row). This is real, genuine outstanding
+master-plan work requiring its own data-modeling decision — the user explicitly chose to close
+Phase 6 with it **permanently excluded from this phase's scope**, to be picked up as a dedicated
+future initiative rather than reopening Phase 6 or folding it into Phase 7/8 implicitly.
+
+Commits: `8c2ea6f` (feat: implement phase 6 website integration), `c4c4055` (docs: status doc),
+`936d8fa` (fix: open_in_new_tab), plus this closure documentation update. Nothing pushed to any
+remote; production (`https://connectmytours.com`) untouched.
 
 Phase 7 and Phase 8 remain **not started**.
