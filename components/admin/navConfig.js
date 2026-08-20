@@ -87,6 +87,14 @@ export const NAV_SECTIONS = [
     ],
   },
   {
+    label: "Reports",
+    items: [
+      { href: "/admin/reports/leads", label: "Lead Reports", permission: "view_reports" },
+      { href: "/admin/reports/sales", label: "Sales Reports", permission: "view_reports" },
+      { href: "/admin/reports/marketing", label: "Marketing Reports", permission: "view_reports" },
+    ],
+  },
+  {
     label: "Account",
     items: [{ href: "/admin/security", label: "Security", permission: null }],
   },
