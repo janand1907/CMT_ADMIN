@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ConnectMyTours Admin User Guide</title>
+<style>
+:root{
+  --primary-50:#eaf1fb;--primary-100:#d3e3f6;--primary-200:#a8c8ed;--primary-300:#6fa3de;
+  --primary-400:#3a7fce;--primary-500:#1279d1;--primary-600:#0d5aa3;--primary-700:#0a3f7a;
+  --primary-800:#062a54;--primary-900:#00205a;
+  --gray-25:#fbfaf9;--gray-50:#f7f7f6;--gray-100:#eeebe7;--gray-200:#e2e2e0;--gray-300:#cfcfcb;
+  --gray-400:#a3a29d;--gray-500:#7a7973;--gray-600:#57564f;--gray-700:#3d3c37;--gray-800:#28271f;--gray-900:#161510;
+  --green-50:#eafaf1;--green-600:#1a9b5c;--green-700:#137a48;
+  --amber-50:#fff7e6;--amber-600:#b7791f;
+  --red-50:#fdeded;--red-600:#c0392b;
+  --radius:12px;
+  --header-h:60px;
+  --font: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;font-family:var(--font);color:var(--gray-800);background:var(--gray-25);
+  font-size:15px;line-height:1.6;
+}
+img{max-width:100%;height:auto;display:block;border-radius:8px;border:1px solid var(--gray-200);}
+a{color:var(--primary-600);}
+code{background:var(--gray-100);padding:1px 6px;border-radius:4px;font-size:0.9em;}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:50;height:var(--header-h);display:flex;align-items:center;gap:16px;
+  padding:0 20px;background:#fff;border-bottom:1px solid var(--gray-200);
+}
+.topbar .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--primary-900);white-space:nowrap;}
+.topbar .brand .mark{
+  width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--primary-600),var(--primary-900));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;
+}
+.topbar .subtitle{color:var(--gray-500);font-weight:500;font-size:13px;display:none;}
+.searchwrap{margin-left:auto;flex:1;max-width:320px;position:relative;}
+.searchwrap input{
+  width:100%;padding:8px 12px 8px 32px;border-radius:8px;border:1px solid var(--gray-300);font-size:13.5px;
+  background:var(--gray-50) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="%237a7973" stroke-width="1.8"><circle cx="6" cy="6" r="5"/><path d="M10 10l3.5 3.5"/></svg>') 10px center no-repeat;
+}
+.searchwrap input:focus{outline:2px solid var(--primary-300);outline-offset:1px;}
+.toc-toggle{
+  display:none;border:1px solid var(--gray-300);background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer;
+}
+@media (max-width:1023px){
+  .toc-toggle{display:block;}
+  .searchwrap{max-width:180px;}
+}
+@media (min-width:640px){ .topbar .subtitle{display:inline;} }
+
+/* ---------- Layout ---------- */
+.layout{display:flex;max-width:1320px;margin:0 auto;}
+.toc{
+  width:270px;flex-shrink:0;position:sticky;top:var(--header-h);height:calc(100vh - var(--header-h));
+  overflow-y:auto;padding:22px 14px 60px 20px;border-right:1px solid var(--gray-200);
+}
+.toc-group{margin-bottom:18px;}
+.toc-group-label{
+  font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gray-400);
+  padding:0 10px 6px;
+}
+.toc a{
+  display:block;padding:6px 10px;border-radius:7px;color:var(--gray-600);text-decoration:none;font-size:13.5px;
+  border-left:2px solid transparent;
+}
+.toc a:hover{background:var(--gray-100);color:var(--gray-900);}
+.toc a.active{background:var(--primary-50);color:var(--primary-700);border-left-color:var(--primary-600);font-weight:600;}
+.toc a.group-link{font-weight:700;color:var(--gray-800);}
+.toc li.hidden-by-search{display:none;}
+
+.content{flex:1;min-width:0;padding:32px 28px 100px;max-width:900px;}
+@media (max-width:1023px){
+  .toc{
+    position:fixed;left:0;top:var(--header-h);z-index:40;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.12);
+    transform:translateX(-102%);transition:transform .2s ease;width:280px;
+  }
+  .toc.open{transform:translateX(0);}
+  .content{padding:24px 18px 100px;max-width:100%;}
+}
+
+/* ---------- Typography ---------- */
+h1{font-size:28px;color:var(--primary-900);margin:0 0 6px;}
+h2{
+  font-size:22px;color:var(--primary-900);margin:48px 0 4px;padding-top:14px;border-top:1px solid var(--gray-200);
+  scroll-margin-top:calc(var(--header-h) + 12px);
+}
+h2:first-of-type{border-top:none;padding-top:0;}
+h3{font-size:17px;color:var(--gray-900);margin:30px 0 4px;scroll-margin-top:calc(var(--header-h) + 12px);}
+h4{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);margin:18px 0 6px;}
+p{margin:8px 0;}
+.lede{color:var(--gray-600);font-size:15.5px;}
+.section-anchor{scroll-margin-top:calc(var(--header-h) + 12px);}
+.breadcrumb{font-size:12.5px;color:var(--gray-400);margin:2px 0 10px;}
+.breadcrumb b{color:var(--primary-700);font-weight:600;}
+
+/* ---------- Cards / boxes ---------- */
+.card{
+  background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:16px 18px;margin:12px 0;
+}
+.callout{
+  border-radius:var(--radius);padding:12px 16px;margin:14px 0;font-size:14px;border:1px solid transparent;
+}
+.callout.note{background:var(--primary-50);border-color:var(--primary-100);color:var(--primary-800);}
+.callout.warn{background:var(--amber-50);border-color:#f3d99a;color:#7a5510;}
+.callout.limit{background:var(--gray-50);border-color:var(--gray-200);color:var(--gray-700);}
+.callout b{display:block;margin-bottom:2px;}
+
+ol,ul{padding-left:22px;}
+ol li,ul li{margin:4px 0;}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--gray-200);}
+th{color:var(--gray-500);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+.table-wrap{overflow-x:auto;}
+
+.badge{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;}
+.badge.gray{background:var(--gray-100);color:var(--gray-600);}
+.badge.green{background:var(--green-50);color:var(--green-700);}
+.badge.amber{background:var(--amber-50);color:var(--amber-600);}
+.badge.red{background:var(--red-50);color:var(--red-600);}
+.badge.blue{background:var(--primary-50);color:var(--primary-700);}
+
+.shot-caption{font-size:12px;color:var(--gray-500);margin-top:4px;}
+.shot-missing{
+  border:1px dashed var(--gray-300);border-radius:8px;padding:22px;text-align:center;color:var(--gray-400);
+  font-size:13px;background:var(--gray-50);
+}
+
+/* ---------- Diagrams ---------- */
+.diagram{
+  display:flex;align-items:stretch;gap:0;margin:18px 0;flex-wrap:wrap;
+}
+.dbox{
+  background:var(--primary-50);border:1px solid var(--primary-200);color:var(--primary-800);
+  border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;text-align:center;
+  display:flex;align-items:center;justify-content:center;min-width:110px;
+}
+.dbox.alt{background:var(--gray-50);border-color:var(--gray-300);color:var(--gray-600);font-weight:500;}
+.dbox.end{background:var(--green-50);border-color:#bfe6cf;color:var(--green-700);}
+.dbox.stop{background:var(--red-50);border-color:#f1c3bd;color:var(--red-600);font-weight:500;}
+.darrow{display:flex;align-items:center;justify-content:center;color:var(--gray-400);font-size:18px;min-width:28px;}
+.dcol{display:flex;flex-direction:column;gap:8px;}
+.dbranch{display:flex;flex-direction:column;gap:6px;justify-content:center;}
+@media (max-width:640px){
+  .diagram{flex-direction:column;align-items:flex-start;}
+  .darrow{transform:rotate(90deg);min-height:20px;}
+}
+
+/* back to top */
+#backtotop{
+  position:fixed;right:22px;bottom:22px;background:var(--primary-700);color:#fff;border:none;border-radius:999px;
+  padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(10,63,122,.3);
+  display:none;
+}
+#backtotop.show{display:block;}
+
+.toc-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:35;display:none;
+}
+.toc-overlay.show{display:block;}
+
+footer.doc-footer{
+  border-top:1px solid var(--gray-200);margin-top:60px;padding-top:20px;color:var(--gray-400);font-size:12.5px;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="toc-toggle" id="tocToggle" aria-label="Open table of contents">☰</button>
+  <div class="brand"><span class="mark">CN</span> ConnectMyTours <span class="subtitle">Admin User Guide</span></div>
+  <div class="searchwrap">
+    <input type="text" id="tocSearch" placeholder="Search this guide…" autocomplete="off">
+  </div>
+</div>
+
+<div class="toc-overlay" id="tocOverlay"></div>
+
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="Table of contents">
+
+    <div class="toc-group">
+      <div class="toc-group-label">Getting Started</div>
+      <ul>
+        <li><a href="#welcome">Welcome</a></li>
+        <li><a href="#signing-in">Signing In</a></li>
+        <li><a href="#layout-overview">Understanding the Layout</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">Overview</div>
+      <ul><li><a href="#dashboard">Dashboard</a></li></ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">CRM</div>
+      <ul>
+        <li><a href="#leads">Leads</a></li>
+        <li><a href="#quotations">Quotations</a></li>
+        <li><a href="#bookings">Bookings</a></li>
+        <li><a href="#customers">Customers</a></li>
+        <li><a href="#followups">Follow-ups</a></li>
+        <li><a href="#tasks">Tasks</a></li>
+        <li><a href="#activity">Activity</a></li>
+        <li><a href="#tags-sources">Tags &amp; Sources</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">Inventory</div>
+      <ul>
+        <li><a href="#destinations">Destinations</a></li>
+        <li><a href="#categories">Categories</a></li>
+        <li><a href="#packages">Packages</a></li>
+        <li><a href="#media-library">Media Library</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">CMS</div>
+      <ul>
+        <li><a href="#pages">Pages</a></li>
+        <li><a href="#page-builder">Page Builder</a></li>
+        <li><a href="#blog">Blog</a></li>
+        <li><a href="#banners">Banners</a></li>
+        <li><a href="#faqs">FAQs</a></li>
+        <li><a href="#testimonials">Testimonials</a></li>
+        <li><a href="#homepage-sections">Homepage Sections</a></li>
+        <li><a href="#menus">Navigation / Menus</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">Marketing</div>
+      <ul>
+        <li><a href="#automation">Follow-up Automation</a></li>
+        <li><a href="#templates">WhatsApp Templates</a></li>
+        <li><a href="#campaigns">Campaigns</a></li>
+        <li><a href="#whatsapp-messages">WhatsApp Messages</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">Reports</div>
+      <ul>
+        <li><a href="#lead-reports">Lead Reports</a></li>
+        <li><a href="#sales-reports">Sales Reports</a></li>
+        <li><a href="#marketing-reports">Marketing Reports</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">Account</div>
+      <ul><li><a href="#security">Security</a></li></ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">Settings</div>
+      <ul>
+        <li><a href="#whatsapp-settings">WhatsApp Settings</a></li>
+        <li><a href="#error-logs">Error Logs</a></li>
+      </ul>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">Reference</div>
+      <ul>
+        <li><a href="#roles-permissions">Roles &amp; Permissions</a></li>
+        <li><a href="#workflows">Common Workflows</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+        <li><a href="#guide-faq">FAQ</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+        <li><a href="#version-status">Version &amp; Status</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="content" id="content">
+
+    <h1 id="welcome" class="section-anchor">ConnectMyTours Admin User Guide</h1>
+    <p class="lede">A practical, feature-by-feature guide to the ConnectMyTours admin panel — what each screen does, why it exists, and how to use it. This guide documents the panel exactly as it is built today; it is not a plan for future work.</p>
+
+    <div class="callout note">
+      <b>How to use this guide</b>
+      Use the panel on the left to jump to any section — it mirrors the admin panel's own navigation exactly, group for group. On a phone or narrow tablet, tap the ☰ button at the top to open it. The search box filters this list as you type.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="signing-in" class="section-anchor">Signing In</h2>
+    <p class="breadcrumb"><b>Admin Panel → Sign In</b></p>
+
+    <h3>What is it?</h3>
+    <p>The admin login screen at <code>/admin/login</code> is the single entry point to every feature in this guide. Access is managed centrally — there is no self-service sign-up; every account is created for you by an administrator.</p>
+
+    <h3>Why do we use it?</h3>
+    <p>Every screen behind the login is scoped to your account's permissions, so the system needs to know who you are before showing you anything. Sign-in also powers the per-account activity trail visible on your own <a href="#security">Security</a> page.</p>
+
+    <h3>How to use it</h3>
+    <ol>
+      <li>Go to <code>/admin/login</code> and enter the email and password given to you by your administrator.</li>
+      <li>Click <b>Sign in</b>. On success you land on the <a href="#dashboard">Dashboard</a>.</li>
+      <li>If you forget your password, click <b>Forgot password?</b>, enter your email, and click <b>Send reset link</b> — a reset email is sent if that address has an account. You'll see a confirmation message either way (the screen does not reveal whether an email exists, as a normal security precaution).</li>
+      <li>You can also change your password any time while signed in, from the profile menu — see <a href="#security">Security</a>.</li>
+    </ol>
+
+    <div class="callout warn">
+      <b>Repeated failed attempts</b>
+      After 5 incorrect password attempts for the same email from the same network within 10 minutes, sign-in is temporarily blocked with the message "Too many failed attempts. Please try again in a few minutes." This protects accounts from password-guessing and clears itself automatically after the window passes — it is not a lockout you need to ask an administrator to lift.
+    </div>
+
+    <div class="diagram">
+      <div class="dbox">Enter email &amp; password</div><div class="darrow">→</div>
+      <div class="dbox alt">Too many recent failures?</div><div class="darrow">→</div>
+      <div class="dcol">
+        <div class="dbox stop">Yes → blocked ~10 min</div>
+        <div class="dbox">No → credentials checked</div>
+      </div>
+      <div class="darrow">→</div>
+      <div class="dbox end">Success → Dashboard</div>
+    </div>
+
+    <div class="card">
+      <img src="admin-user-guide-assets/login.png" alt="Admin sign-in screen" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: login.png'}))">
+      <p class="shot-caption">The admin sign-in screen.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="layout-overview" class="section-anchor">Understanding the Layout</h2>
+    <p class="breadcrumb"><b>Admin Panel</b></p>
+    <h3>What is it?</h3>
+    <p>Every screen behind login shares the same shell: a header across the top, a navigation rail on the left, and the page content in the middle.</p>
+    <h3>How to use it</h3>
+    <ul>
+      <li><b>Header</b> — the ConnectMyTours logo (click it to return to the Dashboard from anywhere), the <b>How to Use</b> link that opens this guide, and your account avatar on the far right.</li>
+      <li><b>Navigation rail</b> — a narrow strip of icons on the left, one per section (Overview, CRM, Inventory, CMS, Marketing, Reports, Account, Settings). Hover over it and it widens briefly to show each section's label. Click any icon to jump straight to that section's first page.</li>
+      <li><b>Permanent submenu</b> — next to the rail, the list of pages inside whichever section you're currently in (for example, inside CRM you'll see Leads, Quotations, Bookings, and so on). This updates automatically as you navigate.</li>
+      <li><b>On mobile/tablet</b>, the rail and submenu collapse into a single ☰ menu button in the header.</li>
+      <li>You will only ever see the sections and pages your account has permission for — see <a href="#roles-permissions">Roles &amp; Permissions</a>.</li>
+    </ul>
+    <div class="card">
+      <img src="admin-user-guide-assets/nav-expanded.png" alt="Admin navigation rail expanded on hover, with permanent submenu" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: nav-expanded.png'}))">
+      <p class="shot-caption">The navigation rail widens on hover; the submenu next to it always shows the current section's pages.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="dashboard" class="section-anchor">Dashboard</h2>
+    <p class="breadcrumb"><b>Admin Panel → Overview → Dashboard</b></p>
+
+    <h3>What is it?</h3>
+    <p>The Dashboard is the landing page after sign-in. For roles with reporting access, it shows nine key numbers and four charts summarising the business right now. For roles without reporting access, it shows a simple welcome message instead.</p>
+
+    <h3>Why do we use it?</h3>
+    <p>It's a single-glance snapshot of the sales pipeline and marketing activity, so an Admin/Manager doesn't need to open every CRM and Reports page individually to know how the day is going.</p>
+
+    <h3>How to access it</h3>
+    <p>Sign in — the Dashboard is the default landing page — or click the ConnectMyTours logo in the header from anywhere.</p>
+
+    <h3>How to use it</h3>
+    <ul>
+      <li>The nine cards along the top are: <b>Today's Enquiries</b>, <b>New Leads</b>, <b>Pending Quotations</b>, <b>Follow-ups Due</b>, <b>Confirmed Bookings</b>, <b>Lost Leads</b>, <b>Lead Conversion Rate</b> (confirmed ÷ total leads), <b>Quotation Conversion Rate</b> (accepted ÷ sent quotations), and <b>Quotation Value</b> (excludes rejected/expired quotations).</li>
+      <li><b>Lead Status Distribution</b> — a donut chart of every lead's current status.</li>
+      <li><b>Leads Over Time</b> — a line chart of new leads across the last 14 days.</li>
+      <li><b>Lead Source Distribution</b> — a bar chart of where leads are coming from (see <a href="#tags-sources">Tags &amp; Sources</a>).</li>
+      <li><b>Quotation Outcomes</b> — sent / accepted / rejected counts, matching the same numbers shown on <a href="#sales-reports">Sales Reports</a>.</li>
+    </ul>
+
+    <div class="callout limit">
+      <b>Who sees the numbers</b>
+      The KPI cards and charts only appear for accounts with reporting access (Admin/Manager and Super Admin). This isn't just a display choice — a Sales Staff account's session is scoped to their own assigned leads, so a "company-wide" number computed under their session would silently be their own subset presented as if it were the total. Sales Staff instead see a plain message that reports are available to Admin/Manager.
+    </div>
+
+    <div class="card">
+      <img src="admin-user-guide-assets/dashboard.png" alt="Dashboard with KPI cards and charts" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: dashboard.png'}))">
+      <p class="shot-caption">The Dashboard for a role with reporting access.</p>
+    </div>
+
+    <!-- ============================================================ CRM ============================================================ -->
+    <h2 id="leads" class="section-anchor">Leads</h2>
+    <p class="breadcrumb"><b>Admin Panel → CRM → Leads</b></p>
+
+    <h3>What is it?</h3>
+    <p>A lead is one customer enquiry — whether it arrived through the public website's enquiry form or was entered manually by staff. Leads are the starting point of the entire sales pipeline: a lead can go on to have quotations and, eventually, a booking.</p>
+
+    <h3>Why do we use it?</h3>
+    <p>It gives every enquiry a single record staff can track, assign, prioritise, and follow up on, instead of enquiries living in scattered messages or spreadsheets.</p>
+
+    <h3>How to access it</h3>
+    <p>From the nav rail, hover <b>CRM</b> and click <b>Leads</b>, or click any lead link elsewhere in the panel. Requires <code>view_leads_own</code> (your assigned leads) or <code>view_leads_all</code> (every lead).</p>
+
+    <h3>How to use it</h3>
+    <ol>
+      <li>The list shows every lead's enquiry number (format <code>CMT-YYYY-NNNN</code>), customer, package/travel date, status, priority, who it's assigned to, and when it was created.</li>
+      <li>Filter by status, or by <b>Assigned to me</b> / <b>Unassigned</b> / <b>All leads</b>, or search by name, phone, or enquiry number.</li>
+      <li>Click <b>New Lead</b> (if you have <code>create_leads</code>) and fill in the customer's details, trip details (destination, dates, travellers, budget), and pipeline info (priority, source, who it's assigned to). Only Name and Phone are required — everything else can be filled in later. The customer record is automatically matched or created by phone number.</li>
+      <li>Open a lead to see its full detail page: a <b>Pipeline</b> card at the top to change Status, Priority, or Assignment, and a tabbed area below for <b>Quotations</b>, <b>Notes</b>, <b>Follow-ups</b>, <b>Tasks</b>, <b>Tags</b>, and <b>Activity</b>.</li>
+      <li>Click <b>New Quotation</b> on a lead's page to start a quotation for that lead — see <a href="#quotations">Quotations</a>.</li>
+    </ol>
+
+    <h4>Lead status values</h4>
+    <div class="table-wrap"><table>
+      <tr><th>Status</th><th>Meaning</th></tr>
+      <tr><td>New</td><td>Just created, not yet contacted.</td></tr>
+      <tr><td>Contacted</td><td>Staff have reached out.</td></tr>
+      <tr><td>Quotation Prepared</td><td>A quotation exists but hasn't been sent.</td></tr>
+      <tr><td>Quotation Sent</td><td>A quotation has been sent to the customer.</td></tr>
+      <tr><td>Follow-up</td><td>Waiting on the customer, a scheduled follow-up is in play.</td></tr>
+      <tr><td>Negotiation</td><td>Actively discussing terms/pricing.</td></tr>
+      <tr><td>Confirmed</td><td>The customer has booked.</td></tr>
+      <tr><td>Not Interested / Lost / Cancelled</td><td>The three ways an enquiry closes without a booking.</td></tr>
+    </table></div>
+
+    <div class="callout note">
+      <b>Status changes automatically at key moments</b>
+      Creating a quotation nudges a new/contacted lead to Quotation Prepared; sending one nudges it to Quotation Sent; confirming a booking nudges the lead to Confirmed. These are one-way nudges — they never move a lead backwards. You can also set a lead's status directly at any time from the Pipeline card; it isn't restricted to a fixed order the way Quotations and Bookings are (see below).
+    </div>
+
+    <div class="callout limit">
+      <b>Assigning leads</b>
+      If you hold <code>assign_leads</code>, you can hand any lead to any staff member. If you only hold <code>edit_leads</code>, you can pick up an unassigned lead for yourself or drop your own, but you cannot reassign a lead to someone else — the system enforces this and will refuse the change.
+    </div>
+
+    <p>Leads are never deleted from the system — closing one out means moving it to Not Interested, Lost, or Cancelled.</p>
+
+    <div class="card">
+      <img src="admin-user-guide-assets/leads-list.png" alt="Leads list" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: leads-list.png'}))">
+      <p class="shot-caption">The Leads list.</p>
+    </div>
+    <div class="card">
+      <img src="admin-user-guide-assets/lead-detail.png" alt="Lead detail page" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: lead-detail.png'}))">
+      <p class="shot-caption">A lead's detail page, with the Pipeline card and tabs.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="quotations" class="section-anchor">Quotations</h2>
+    <p class="breadcrumb"><b>Admin Panel → CRM → Quotations</b></p>
+
+    <h3>What is it?</h3>
+    <p>A quotation is a priced proposal built from one or more packages, always tied to a specific lead. It can be shared with the customer via a public link and, once accepted, becomes the basis for a booking.</p>
+
+    <h3>Why do we use it?</h3>
+    <p>It turns a lead's interest into a concrete, itemised offer with real pricing, and keeps a full history of every version sent to the customer.</p>
+
+    <h3>How to access it</h3>
+    <p>From the nav rail, <b>CRM → Quotations</b>, or via a lead's <b>New Quotation</b> button. Requires <code>view_quotations_own</code> or <code>view_quotations_all</code>; creating one requires <code>create_quotations</code>.</p>
+
+    <h3>How to use it</h3>
+    <ol>
+      <li>Start from a lead (click <b>New Quotation</b> on the lead's page), or search for the lead from the Quotations list's <b>New Quotation</b> screen.</li>
+      <li>Click <b>Add Package</b> to search and add packages. Each line shows the package's Rack and B2B prices; you can override with a Custom Price and apply a Discount % or Discount ₹ (setting one clears the other). The final price is the reference price minus the discount, never below zero.</li>
+      <li>Set an overall <b>Quotation Discount</b> if needed, plus <b>Valid Until</b>, customer-facing <b>Notes</b>, and <b>Terms &amp; Conditions</b>.</li>
+      <li>Click <b>Create Quotation</b>. It starts as <b>Draft</b> — you can keep editing the items freely while it's a draft.</li>
+      <li>When ready, click <b>Send via WhatsApp</b> on the quotation's detail page. A successful send moves the status to <b>Sent</b> and shares the quotation's public link with the customer. (See the note on WhatsApp delivery below.)</li>
+      <li>Track activity in the <b>Messages</b> tab (system events, link opens, and your own notes), review/edit details in the <b>Details</b> tab, and see past versions in the <b>Revisions</b> tab.</li>
+      <li>Once the customer accepts (status becomes <b>Accepted</b>), a <b>Booking</b> card appears on the quotation — see <a href="#bookings">Bookings</a>.</li>
+    </ol>
+
+    <h4>Quotation status &amp; allowed transitions</h4>
+    <div class="diagram">
+      <div class="dbox">Draft</div><div class="darrow">→</div>
+      <div class="dbox">Sent</div><div class="darrow">→</div>
+      <div class="dbox">Viewed</div><div class="darrow">→</div>
+      <div class="dbranch">
+        <div class="dbox end">Accepted</div>
+        <div class="dbox stop">Rejected</div>
+        <div class="dbox stop">Expired</div>
+      </div>
+    </div>
+    <p>Unlike Leads, quotation status changes are enforced by the system in this order — you cannot skip ahead or jump backwards through the dropdown. A <b>Rejected</b> or <b>Expired</b> quotation (but not an Accepted one) can be reopened as a new draft via <b>Create a revision</b>, which archives the current version into the Revisions tab and lets you edit again under the same quotation number and share link.</p>
+
+    <div class="callout note">
+      <b>The public share link</b>
+      Every quotation has a link at <code>/quote/{token}</code> that the customer can open without logging in. Opening it automatically records a view and flips a Sent quotation to Viewed. You'll find the copyable link in the <b>Share Link</b> card on the quotation's page.
+    </div>
+
+    <div class="callout limit">
+      <b>Sending via WhatsApp</b>
+      "Send via WhatsApp" attempts to deliver the quotation link over WhatsApp. This depends on WhatsApp being configured for this environment — see <a href="#whatsapp-settings">WhatsApp Settings</a> and the note under <a href="#templates">WhatsApp Templates</a>. If a send fails, the quotation's status is left unchanged so you can retry; you can also mark a quotation Sent manually from the status dropdown regardless of whether the WhatsApp message actually went through.
+    </div>
+
+    <div class="card">
+      <img src="admin-user-guide-assets/quotations-list.png" alt="Quotations list" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: quotations-list.png'}))">
+      <p class="shot-caption">The Quotations list.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="bookings" class="section-anchor">Bookings</h2>
+    <p class="breadcrumb"><b>Admin Panel → CRM → Bookings</b></p>
+
+    <h3>What is it?</h3>
+    <p>A booking is a confirmed trip, created from an accepted quotation. It carries the trip dates and tracks payment separately from booking status.</p>
+
+    <h3>Why do we use it?</h3>
+    <p>It's the record of record for a paying customer's actual trip — travel dates, total owed, and how much has been paid so far.</p>
+
+    <h3>How to access it</h3>
+    <p>From the nav rail, <b>CRM → Bookings</b>. Bookings can only be created from an accepted quotation's own page, via the <b>Create Booking</b> form (requires <code>create_bookings</code>) — there is no standalone "new booking" button on the Bookings list.</p>
+
+    <h3>How to use it</h3>
+    <ol>
+      <li>On an <b>Accepted</b> quotation, fill in Travel Start Date (required), Travel End Date, and Notes, then click <b>Create Booking</b>. The total amount is copied from the quotation automatically. Only one booking can exist per quotation.</li>
+      <li>Open a booking to see its <b>Status</b> card, <b>Payment</b> card, and editable <b>Travel &amp; Notes</b>.</li>
+      <li>Record payments in the Payment card: enter <b>Amount Paid</b> (capped at the total) and set a <b>Payment Status</b>, then <b>Save</b>. This is manual bookkeeping — there is no payment gateway wired in, so nothing is calculated for you automatically.</li>
+    </ol>
+
+    <h4>Booking status &amp; allowed transitions</h4>
+    <div class="diagram">
+      <div class="dbox">Pending</div><div class="darrow">→</div>
+      <div class="dbranch">
+        <div class="dbox end">Confirmed → Completed</div>
+        <div class="dbox stop">Cancelled</div>
+      </div>
+    </div>
+    <p>Like quotations, booking status is enforced forward-only: Pending → Confirmed or Cancelled; Confirmed → Completed or Cancelled; Completed and Cancelled are final. The first time a booking becomes Confirmed, its lead's status is automatically nudged to Confirmed too.</p>
+
+    <h4>Payment status values</h4>
+    <p><span class="badge gray">Pending</span> <span class="badge amber">Partial</span> <span class="badge green">Paid</span> <span class="badge blue">Refunded</span> — chosen manually by staff alongside the amount paid; nothing is derived automatically from the amount.</p>
+
+    <p>Bookings, like leads, are never deleted from the system.</p>
+
+    <div class="card">
+      <img src="admin-user-guide-assets/bookings-list.png" alt="Bookings list" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: bookings-list.png'}))">
+      <p class="shot-caption">The Bookings list.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="customers" class="section-anchor">Customers</h2>
+    <p class="breadcrumb"><b>Admin Panel → CRM → Customers</b></p>
+    <h3>What is it?</h3>
+    <p>A customer record holds a person's contact details, kept separate from any one lead so the same person's enquiries and bookings over time all connect to one record.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CRM → Customers</b>. Requires <code>manage_customers</code> (a single permission covers viewing, creating, and editing).</p>
+    <h3>How to use it</h3>
+    <ul>
+      <li>Customers are usually created for you automatically — the first time someone with a given phone number submits an enquiry or is entered as a new lead, a matching customer record is found or created behind the scenes.</li>
+      <li>You can also click <b>New Customer</b> to add one manually, independent of any lead.</li>
+      <li>Open a customer to edit Name, Phone, WhatsApp, Email, Location, and internal Notes, and to see every lead tied to them.</li>
+    </ul>
+    <div class="callout limit"><b>Phone numbers are unique</b> — the system will not let two customer records share the same phone number.</div>
+
+    <!-- ============================================================ -->
+    <h2 id="followups" class="section-anchor">Follow-ups</h2>
+    <p class="breadcrumb"><b>Admin Panel → CRM → Follow-ups</b></p>
+    <h3>What is it?</h3>
+    <p>A follow-up is a scheduled reminder to contact one lead at a specific date/time, with optional notes — lighter-weight than a Task, and specifically about staying in touch with a customer.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CRM → Follow-ups</b> for the cross-lead inbox, or the <b>Follow-ups</b> tab on any individual lead. Requires <code>manage_followups</code>.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>From a lead's Follow-ups tab, set <b>Scheduled for</b> and optional <b>Notes</b>, then click <b>Schedule Follow-up</b>.</li>
+      <li>The Follow-ups inbox groups every follow-up across all leads into three tabs: <b>Upcoming</b>, <b>Overdue</b>, and <b>Completed</b>.</li>
+      <li>Click <b>Mark complete</b> on any pending follow-up once you've made contact — no note is required at that point.</li>
+    </ol>
+
+    <!-- ============================================================ -->
+    <h2 id="tasks" class="section-anchor">Tasks</h2>
+    <p class="breadcrumb"><b>Admin Panel → CRM → Tasks</b></p>
+    <h3>What is it?</h3>
+    <p>A typed, assignable to-do tied to a lead — for example "Call the customer" or "Request payment" — distinct from a Follow-up in that it has a type, priority, and assignee.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CRM → Tasks</b> for the cross-lead inbox, or a lead's <b>Tasks</b> tab. Requires <code>manage_tasks</code>.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>From a lead's Tasks tab, choose a <b>Type</b> (Call, Send Quotation, Follow-up, Request Payment, Confirm Booking), a <b>Due</b> date/time, <b>Priority</b>, and who to <b>Assign To</b>, then click <b>Add Task</b>.</li>
+      <li>The Tasks inbox lists every task across all leads, defaulting to open tasks (everything except Cancelled); change the status filter to see a specific status.</li>
+      <li>Update a task's status directly from the inbox's inline dropdown: <span class="badge gray">Pending</span> <span class="badge blue">In Progress</span> <span class="badge green">Done</span> <span class="badge red">Cancelled</span> — any status can be set at any time, there's no enforced order.</li>
+    </ol>
+
+    <!-- ============================================================ -->
+    <h2 id="activity" class="section-anchor">Activity</h2>
+    <p class="breadcrumb"><b>Admin Panel → CRM → Activity</b></p>
+    <h3>What is it?</h3>
+    <p>A read-only, system-generated timeline of everything that's happened across every lead you can see — status changes, assignments, quotations created/sent, bookings created, payments recorded. It's the same feed shown on each lead's own Activity tab, merged across all leads.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CRM → Activity</b>. Requires <code>view_leads_own</code> or <code>view_leads_all</code>.</p>
+    <h3>How to use it</h3>
+    <p>Just scroll — it's the most recent 100 events, newest first, with no filters. Click any enquiry number to jump to that lead.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="tags-sources" class="section-anchor">Tags &amp; Sources</h2>
+    <p class="breadcrumb"><b>Admin Panel → CRM → Tags &amp; Sources</b></p>
+    <h3>What is it?</h3>
+    <p>Two shared catalogs used across the pipeline: <b>Tags</b> are free-form coloured labels staff can attach to any lead (e.g. HOT, VIP, Family), and <b>Sources</b> are the referral/marketing channels a lead can be attributed to (e.g. Google, Facebook, Referral).</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CRM → Tags &amp; Sources</b>. Requires <code>manage_lead_metadata</code>.</p>
+    <h3>How to use it</h3>
+    <ul>
+      <li>Add a tag with a Name and a Color, or add a source with just a Name. Both support deleting an existing entry.</li>
+      <li>Tags are then toggled on/off per lead from the <b>Tags</b> tab on that lead's page. Source is chosen from a dropdown on the lead form.</li>
+    </ul>
+
+    <!-- ============================================================ INVENTORY ============================================================ -->
+    <h2 id="destinations" class="section-anchor">Destinations</h2>
+    <p class="breadcrumb"><b>Admin Panel → Inventory → Destinations</b></p>
+    <h3>What is it?</h3>
+    <p>A destination (e.g. "Kerala", "Goa") that packages can be tagged with, used to organise and filter the Packages list.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Inventory → Destinations</b>. Viewing requires <code>view_inventory</code> or <code>manage_packages</code>; editing requires <code>manage_packages</code>.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Click <b>New Destination</b>, enter a Name (the URL Slug is derived automatically, editable if needed), an optional Description, and a Status of Active or Inactive.</li>
+      <li>A package's <b>Destination</b> field is optional and simply references one of these entries.</li>
+    </ol>
+
+    <h2 id="categories" class="section-anchor">Categories</h2>
+    <p class="breadcrumb"><b>Admin Panel → Inventory → Categories</b></p>
+    <h3>What is it?</h3>
+    <p>A package category (the same shape as a Destination — Name, Slug, Description, Active/Inactive) used to classify and filter packages, e.g. by trip style.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Inventory → Categories</b>. Same permission rules as Destinations.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="packages" class="section-anchor">Packages</h2>
+    <p class="breadcrumb"><b>Admin Panel → Inventory → Packages</b></p>
+
+    <h3>What is it?</h3>
+    <p>A tour package — the product that gets quoted, booked, and sold. This is the most detailed record in Inventory, with its own set of tabs.</p>
+
+    <h3>Why do we use it?</h3>
+    <p>It's the shared source of pricing and content that both Quotations (via the package picker) and the public website draw from.</p>
+
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Inventory → Packages</b>. Requires <code>manage_packages</code> to open a package's detail tabs (list view only needs <code>view_inventory</code> or <code>manage_packages</code>); the SEO tab additionally needs <code>manage_seo</code>.</p>
+
+    <h3>How to use it</h3>
+    <p>A package's detail page has up to five tabs:</p>
+    <ul>
+      <li><b>Details</b> — Name, Slug, Destination, Category, free-text Package Type (e.g. darshan, VIP, group, honeymoon), Room / Category, Duration (days/nights), Status (Active/Inactive), Short Description, and two checkboxes: <b>Featured package</b> and <b>Available for booking</b>.</li>
+      <li><b>Content</b> — the full Description, a day-by-day <b>Itinerary</b> builder (add/remove days, each with a title and description), and <b>Inclusions &amp; Exclusions</b> (one item per line).</li>
+      <li><b>Pricing</b> — add any number of price rows of type <b>Rack Rate</b>, <b>B2B Rate</b>, <b>Custom</b>, or <b>Seasonal</b>, each with a label, price, currency, an optional validity window, and an Active checkbox.</li>
+      <li><b>Images</b> — attach images from the Media Library, mark one as the <b>cover</b> image (used as the thumbnail), and reorder with the ← / → arrows.</li>
+      <li><b>SEO</b> — the same shared SEO fields used on Pages and Blog posts (see <a href="#pages">Pages</a>).</li>
+    </ul>
+
+    <div class="callout note">
+      <b>Status vs. Available for booking</b>
+      These are two separate switches. <b>Status</b> (Active/Inactive) controls whether the package exists as a live product at all. <b>Available for booking</b> is independent — it lets you mark an active, live package as temporarily sold out for a season without touching its Active status. New packages are created <b>Inactive</b> by default, so you can finish setting one up before it goes live. There is deliberately no separate "Draft" status.
+    </div>
+
+    <div class="card">
+      <img src="admin-user-guide-assets/packages-list.png" alt="Packages list" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: packages-list.png'}))">
+      <p class="shot-caption">The Packages list.</p>
+    </div>
+    <div class="card">
+      <img src="admin-user-guide-assets/package-pricing-tab.png" alt="Package Pricing tab" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: package-pricing-tab.png'}))">
+      <p class="shot-caption">A package's Pricing tab — Rack, B2B, Custom, and Seasonal rates.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="media-library" class="section-anchor">Media Library</h2>
+    <p class="breadcrumb"><b>Admin Panel → Inventory → Media Library</b></p>
+    <h3>What is it?</h3>
+    <p>The shared image store used by Packages, Destinations, CMS pages, Banners, Blog, and Testimonials. Files are organised into <b>areas</b>: Packages, Destinations, Banners, Blog, Gallery, Pages.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Inventory → Media Library</b>, or the picker dialog wherever an image field appears elsewhere in the panel. Viewing requires <code>view_inventory</code>, <code>manage_media</code>, or <code>manage_packages</code>; uploading/editing/deleting requires <code>manage_media</code>.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Accepted file types: JPEG, PNG, WebP, GIF, or SVG, up to 8MB each. Regular photos are automatically converted to WebP for smaller file sizes; SVG uploads are scanned and stripped of any embedded scripts for safety before they're stored.</li>
+      <li>Click <b>Upload</b>, choose an area, and select one or more files.</li>
+      <li>Click <b>Edit</b> on any file to rename it or set its Alt text (used for accessibility and SEO).</li>
+      <li>Click <b>Delete</b> to remove a file — if it's currently used as a package image, you'll be warned how many places will lose that image.</li>
+      <li>Filter the library by area using the pills at the top.</li>
+    </ol>
+
+    <!-- ============================================================ CMS ============================================================ -->
+    <h2 id="pages" class="section-anchor">Pages</h2>
+    <p class="breadcrumb"><b>Admin Panel → CMS → Pages</b></p>
+
+    <h3>What is it?</h3>
+    <p>A standalone page on the public website (other than blog posts), built out of content blocks via the Page Builder — see <a href="#page-builder">Page Builder</a>. The homepage itself is just one special page in this same list.</p>
+
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CMS → Pages</b>. CMS access is only granted to the Content Manager role (and Super Admin). Viewing requires <code>manage_pages</code> or <code>publish_pages</code>; publishing specifically requires <code>publish_pages</code>.</p>
+
+    <h3>How to use it</h3>
+    <ol>
+      <li>Click <b>New Page</b>, enter a Title and Slug. It's created as a <b>Draft</b> with no content yet — you add sections afterward from the Page Builder.</li>
+      <li>On the page's detail screen, click <b>Open Page Builder</b> to add and edit content — see <a href="#page-builder">Page Builder</a>.</li>
+      <li>The <b>Details</b> card lets you edit Title, Slug, and Status (Draft / Published / Archived).</li>
+      <li>If you have <code>manage_seo</code>, an <b>SEO</b> card lets you set SEO Title, Meta Description, Canonical URL, Open Graph title/description/image, and whether the page is indexable by search engines.</li>
+    </ol>
+
+    <div class="diagram">
+      <div class="dbox">Draft (build content in Page Builder)</div><div class="darrow">→</div>
+      <div class="dbox end">Published (live on the website)</div><div class="darrow">→</div>
+      <div class="dbox stop">Archived</div>
+    </div>
+    <p>Status can be changed to any of the three values at any time from the dropdown — there's no enforced order the way there is for Quotations or Bookings. If your account has <code>manage_pages</code> but not <code>publish_pages</code>, you can save drafts but the system will not let you publish.</p>
+
+    <div class="callout limit">
+      <b>The homepage is a page too</b>
+      There is exactly one page marked as the homepage (title "Home", slug "home"). Its Slug can't be changed and it can't be Archived. See <a href="#homepage-sections">Homepage Sections</a> for the shortcut straight to it.
+    </div>
+
+    <div class="card">
+      <img src="admin-user-guide-assets/cms-pages-list.png" alt="CMS Pages list" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: cms-pages-list.png'}))">
+      <p class="shot-caption">The Pages list.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="page-builder" class="section-anchor">Page Builder</h2>
+    <p class="breadcrumb"><b>Admin Panel → CMS → Pages → (a page) → Page Builder</b></p>
+
+    <h3>What is it?</h3>
+    <p>A block-based editor for building a page's content out of reusable sections — hero banners, text, image galleries, testimonials, FAQs, and more — without writing code.</p>
+
+    <h3>How to use it</h3>
+    <ol>
+      <li>Choose a block type from the <b>Add Block</b> panel and click <b>Add Block</b>. It's added to the bottom of the page, empty.</li>
+      <li>Click <b>Edit</b> on a block to fill in its fields, then <b>Save Content</b>. Every edit and reorder saves immediately — there's no separate "Save Page" step.</li>
+      <li>Use the <b>↑</b> / <b>↓</b> buttons to reorder blocks, <b>Enable</b>/<b>Disable</b> to hide a block without deleting it, and <b>Remove</b> to delete it permanently (with a confirmation prompt).</li>
+      <li>Optionally add a <b>Revision Note</b> and click <b>Save Revision</b> to snapshot the current set of blocks. Past revisions can be rolled back to — rolling back replaces the current blocks with that revision's, but does not change the page's Title or Status.</li>
+      <li>Publish the page itself (see <a href="#pages">Pages</a>) once its content is ready — the Page Builder has no separate visual preview, so check the page live on the site after publishing.</li>
+    </ol>
+
+    <h4>Available block types</h4>
+    <div class="table-wrap"><table>
+      <tr><th>Block</th><th>What it's for</th></tr>
+      <tr><td>Hero</td><td>Large banner with heading, subheading, background image, and a button.</td></tr>
+      <tr><td>Rich Text</td><td>A block of body text.</td></tr>
+      <tr><td>Image</td><td>A single image with alt text and caption.</td></tr>
+      <tr><td>Image + Text</td><td>Image alongside a heading and body text, left or right.</td></tr>
+      <tr><td>Two Column</td><td>Two independent text columns side by side.</td></tr>
+      <tr><td>Three Column Cards</td><td>A row of cards (title, description, image, link).</td></tr>
+      <tr><td>Package Listing</td><td>Intended to show packages, optionally filtered by destination.</td></tr>
+      <tr><td>Destination Listing</td><td>Intended to show a set of destinations.</td></tr>
+      <tr><td>CTA</td><td>A heading, short text, and a call-to-action button.</td></tr>
+      <tr><td>Banner</td><td>A single promotional image with a link.</td></tr>
+      <tr><td>Gallery</td><td>A grid of images with captions.</td></tr>
+      <tr><td>Testimonials</td><td>Pulls a set number of active testimonials automatically.</td></tr>
+      <tr><td>FAQ</td><td>Pulls FAQs, optionally filtered by category.</td></tr>
+      <tr><td>Statistics</td><td>A row of label/value stats.</td></tr>
+      <tr><td>Features / Benefits</td><td>A list of features, each with a title, description, and icon.</td></tr>
+      <tr><td>Video</td><td>An embedded video by URL, with a caption.</td></tr>
+      <tr><td>Contact / Enquiry Form</td><td>Embeds the site's enquiry form.</td></tr>
+      <tr><td>WhatsApp CTA</td><td>A button that opens WhatsApp with a pre-filled message.</td></tr>
+      <tr><td>Custom HTML</td><td>Raw HTML for anything not covered above.</td></tr>
+    </table></div>
+
+    <div class="callout warn">
+      <b>Two block types don't render yet</b>
+      <b>Package Listing</b> and <b>Destination Listing</b> can be added to a page in the builder, but the public website does not currently render either one — adding them will not show anything live on the site. Every other block type in the list above does render.
+    </div>
+
+    <div class="diagram">
+      <div class="dbox">Add Block</div><div class="darrow">→</div>
+      <div class="dbox">Edit fields → Save Content</div><div class="darrow">→</div>
+      <div class="dbox">Reorder / Enable / Disable</div><div class="darrow">→</div>
+      <div class="dbox end">Publish the page</div>
+    </div>
+
+    <div class="card">
+      <img src="admin-user-guide-assets/page-builder.png" alt="Page Builder editing screen" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: page-builder.png'}))">
+      <p class="shot-caption">The Page Builder for the homepage.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="blog" class="section-anchor">Blog</h2>
+    <p class="breadcrumb"><b>Admin Panel → CMS → Blog</b></p>
+    <h3>What is it?</h3>
+    <p>Blog posts for the public website — Title, Slug, an optional single Category, an Excerpt, a Body, an optional Featured Image, and tags.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CMS → Blog</b>. Requires <code>manage_blog</code> or <code>publish_blog</code>; publishing specifically requires <code>publish_blog</code>.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Click <b>New Post</b> and fill in Title, Slug, Category, Excerpt, and Body. It's created as a Draft; the Featured Image and Tags can be set after creating it, from the edit screen.</li>
+      <li>The Body field is a plain text/HTML box — it is not a rich-text (WYSIWYG) or Markdown editor.</li>
+      <li>Use <b>Categories &amp; Tags</b> from the Blog list to manage the shared category and tag lists (name-only, add/delete).</li>
+      <li>Set Status to Published when ready (requires <code>publish_blog</code>).</li>
+    </ol>
+
+    <h2 id="banners" class="section-anchor">Banners</h2>
+    <p class="breadcrumb"><b>Admin Panel → CMS → Banners</b></p>
+    <h3>What is it?</h3>
+    <p>Promotional banners with an image, heading, description, a call-to-action button/link, and an optional scheduling window.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CMS → Banners</b>. Requires <code>manage_banners</code>.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Click <b>New Banner</b> and fill in Heading, Description, CTA Text/Link, an Image, and optional Start/End Date. Status defaults to Inactive until you switch it on.</li>
+      <li>Reorder banners with ↑ / ↓. Deleting is permanent — there's no separate deactivate step, though you can also just set Status to Inactive.</li>
+      <li>Each banner's list row shows a computed <b>Live</b> / <b>Scheduled</b> / <b>Expired</b> / <b>Inactive</b> state based on its dates and status, so you can see at a glance which banners are actually showing.</li>
+    </ol>
+
+    <h2 id="faqs" class="section-anchor">FAQs</h2>
+    <p class="breadcrumb"><b>Admin Panel → CMS → FAQs</b></p>
+    <h3>What is it?</h3>
+    <p>A flat list of question/answer pairs shown on the website (and pullable into a page via the Page Builder's FAQ block). Each entry has an optional free-text Category used purely to filter which FAQs a given FAQ block shows.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CMS → FAQs</b>. Requires <code>manage_faqs</code>.</p>
+    <h3>How to use it</h3>
+    <p>Add a Question and Answer (and optional Category) from the form at the top; reorder with ↑ / ↓; Edit or Delete any existing entry. Unlike Pages and Blog, FAQs have no Draft/Published status — an FAQ is either present or deleted.</p>
+
+    <h2 id="testimonials" class="section-anchor">Testimonials</h2>
+    <p class="breadcrumb"><b>Admin Panel → CMS → Testimonials</b></p>
+    <h3>What is it?</h3>
+    <p>Customer reviews shown on the site, with a Customer Name, Review text, optional 1–5 star Rating, and optional Photo.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CMS → Testimonials</b>. Requires <code>manage_testimonials</code>.</p>
+    <h3>How to use it</h3>
+    <p>Click <b>New Testimonial</b>, fill in the fields, and set Status to Active to make it eligible to appear. Reorder with ↑ / ↓; Delete removes it permanently.</p>
+
+    <h2 id="homepage-sections" class="section-anchor">Homepage Sections</h2>
+    <p class="breadcrumb"><b>Admin Panel → CMS → Homepage Sections</b></p>
+    <h3>What is it?</h3>
+    <p>Not a separate tool — this is simply a direct shortcut into the Page Builder for the one page marked as the homepage. "Controlling the homepage" means the exact same add/edit/reorder/enable/disable workflow described under <a href="#page-builder">Page Builder</a>, applied to that one page.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CMS → Homepage Sections</b> — it takes you straight into that page's Page Builder. Same permissions as Pages.</p>
+    <div class="callout limit">The homepage's blocks only appear live on the site once the homepage page itself is <b>Published</b>.</div>
+
+    <h2 id="menus" class="section-anchor">Navigation / Menus</h2>
+    <p class="breadcrumb"><b>Admin Panel → CMS → Navigation / Menus</b></p>
+    <h3>What is it?</h3>
+    <p>Editable navigation menus for the public site's header and footer, so links can be changed without a code deployment.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>CMS → Navigation / Menus</b>. Requires <code>manage_menus</code>.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Click <b>New Menu</b>, give it a Name and a Location (Header, Footer, or Custom).</li>
+      <li>Open a menu to add items: a Label, a URL, an optional Parent Item (menus support one level of nesting — top-level items and their direct children only), and an "Open in new tab" checkbox.</li>
+      <li>Reorder items with ↑ / ↓ (reordering is scoped to items under the same parent). Deleting a parent item also deletes its children.</li>
+    </ol>
+    <div class="callout warn">
+      <b>Two known limitations</b>
+      If a Header or Footer menu doesn't exist yet, or has zero items, the public site quietly falls back to its own built-in default links — nothing breaks, but your menu changes won't show until the menu has at least one item. Separately, the "Open in new tab" checkbox is saved but does not yet actually affect how the link opens on the live site.
+    </div>
+
+    <!-- ============================================================ MARKETING ============================================================ -->
+    <div class="callout warn">
+      <b>Before you use anything in this Marketing section</b>
+      Every WhatsApp feature below describes how the system is <i>configured</i> to send messages once connected to Meta's WhatsApp Business API. As of this guide, Meta API credentials have not been set up in this environment, so no WhatsApp message has actually been delivered by this system yet — see <a href="#whatsapp-settings">WhatsApp Settings</a> and <a href="#troubleshooting">Troubleshooting</a> for what that means day to day.
+    </div>
+
+    <h2 id="automation" class="section-anchor">Follow-up Automation</h2>
+    <p class="breadcrumb"><b>Admin Panel → Marketing → Follow-up Automation</b></p>
+    <h3>What is it?</h3>
+    <p>A rules engine that, once WhatsApp is connected, would automatically send morning and evening follow-up WhatsApp messages to leads sitting in chosen statuses, up to a configured number of messages per lead.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Marketing → Follow-up Automation</b>. Requires <code>manage_whatsapp_automation</code>.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Set the engine's <b>Status</b> (Active / Paused / Stopped), a <b>Follow-up Duration</b> in days, <b>Morning</b> and <b>Evening</b> send times, a <b>Max Messages per Lead</b> cap, and which lead statuses are eligible, then click <b>Save Settings</b>.</li>
+      <li>The <b>Per-Lead Automation State</b> table below shows every tracked lead's own automation status (Active / Paused / Stopped / Completed), how many messages it's had, and — if stopped — why (e.g. "Customer booked", "Lead lost", "Max messages reached"). You can override a single lead's state from its row.</li>
+    </ol>
+    <p>The engine stops automatically for a lead the moment a booking is confirmed, the lead is marked Not Interested/Lost/Cancelled, the customer opts out by replying, the message cap is reached, or the follow-up duration expires.</p>
+    <div class="card">
+      <img src="admin-user-guide-assets/marketing-automation.png" alt="Follow-up Automation settings" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: marketing-automation.png'}))">
+      <p class="shot-caption">Follow-up Automation settings.</p>
+    </div>
+
+    <h2 id="templates" class="section-anchor">WhatsApp Templates</h2>
+    <p class="breadcrumb"><b>Admin Panel → Marketing → WhatsApp Templates</b></p>
+    <h3>What is it?</h3>
+    <p>Reusable message templates the system picks from automatically depending on why it's sending a message (enquiry confirmation, quotation, morning/evening follow-up), or that staff choose manually for a Campaign.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Marketing → WhatsApp Templates</b>. Requires <code>manage_whatsapp_templates</code> to create/edit (viewing also allowed with either WhatsApp Messages permission).</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Click <b>New Template</b> and set a Name, a Purpose (Enquiry Confirmation / Quotation / Morning Follow-up / Evening Follow-up / Campaign / Manual), a Category (Utility / Marketing / Authentication), and the Body Text — use <code>{{1}}</code>, <code>{{2}}</code>, etc. for variables, numbered in order starting from 1.</li>
+      <li>Optionally set Header Text, Footer Text, and a Provider Template Name matching the name approved in Meta's WhatsApp Business Manager.</li>
+      <li>When sending, the system uses the oldest active template matching the required Purpose. There's no hard delete — the row action instead <b>Deactivate</b>s a template.</li>
+    </ol>
+
+    <h2 id="campaigns" class="section-anchor">Campaigns</h2>
+    <p class="breadcrumb"><b>Admin Panel → Marketing → Campaigns</b></p>
+    <h3>What is it?</h3>
+    <p>A one-time or scheduled bulk WhatsApp send to a group of leads matching a status filter, using a chosen template.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Marketing → Campaigns</b>. Requires <code>manage_whatsapp_campaigns</code> to create/send.</p>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Give it a Name, choose a Template, optionally set a Lead Status Filter (comma-separated, e.g. <code>new, contacted, follow_up</code> — defaults to that same set if left blank), and optionally a <b>Schedule At</b> date/time.</li>
+      <li>The matching leads become the campaign's recipient list at creation time, shown as a count.</li>
+      <li>Click <b>Send</b> on a Draft campaign to send immediately. Recipients who've opted out of WhatsApp or have no phone number are automatically skipped.</li>
+      <li>If Schedule At is set, a scheduled check (run periodically on the server) sends the campaign automatically once that time passes — this runs independently of the Follow-up Automation engine's own Active/Paused/Stopped setting.</li>
+    </ol>
+    <p>Status values: <span class="badge gray">Draft</span> <span class="badge amber">Sending</span> <span class="badge green">Completed</span> <span class="badge amber">Partially Failed</span> <span class="badge red">Failed</span>. <b>Deactivate</b> is available on any campaign that hasn't finished — note that it sets the campaign's status to <b>Failed</b> rather than a separate "cancelled" state.</p>
+
+    <h2 id="whatsapp-messages" class="section-anchor">WhatsApp Messages</h2>
+    <p class="breadcrumb"><b>Admin Panel → Marketing → WhatsApp Messages</b></p>
+    <h3>What is it?</h3>
+    <p>A read-only log of every WhatsApp message the system has attempted to send — from enquiry confirmations, quotations, follow-ups, and campaigns alike.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Marketing → WhatsApp Messages</b>. Requires either WhatsApp Messages permission (Sales Staff only see messages tied to their own assigned leads; Admin/Manager see everyone's).</p>
+    <h3>How to use it</h3>
+    <p>Search by enquiry number or phone. Each row shows the message type, recipient, a truncated body (hover for the full text), and a status: <span class="badge gray">Queued</span> <span class="badge blue">Sent</span> <span class="badge green">Delivered</span> <span class="badge green">Read</span> <span class="badge red">Failed</span>.</p>
+    <div class="callout warn">
+      <b>What "Sent" and "Failed" actually mean right now</b>
+      A message is only logged as Sent if WhatsApp's provider confirmed it with a real message ID. Since this environment has no WhatsApp credentials configured (see <a href="#whatsapp-settings">WhatsApp Settings</a>), any attempted send here will log as <b>Failed</b> — this log reflects real attempts, not a demo/simulated feed, and currently has no genuine Sent/Delivered/Read entries from an actual Meta send.
+    </div>
+
+    <!-- ============================================================ REPORTS ============================================================ -->
+    <h2 id="lead-reports" class="section-anchor">Lead Reports</h2>
+    <p class="breadcrumb"><b>Admin Panel → Reports → Lead Reports</b></p>
+    <h3>What is it?</h3>
+    <p>Six breakdown tables of every lead, sliced a different way each time.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Reports → Lead Reports</b>. Requires <code>view_reports</code>.</p>
+    <h3>How to use it</h3>
+    <p>Read the six tables: <b>Date-wise</b> (by day, IST), <b>Source-wise</b>, <b>Destination-wise</b>, <b>Package-wise</b>, <b>Staff-wise</b> (assigned staff), and <b>Status-wise</b>. There are no interactive filters on this page — it's a fixed, comprehensive breakdown.</p>
+    <div class="card">
+      <img src="admin-user-guide-assets/reports-leads.png" alt="Lead Reports breakdown tables" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: reports-leads.png'}))">
+      <p class="shot-caption">Lead Reports.</p>
+    </div>
+
+    <h2 id="sales-reports" class="section-anchor">Sales Reports</h2>
+    <p class="breadcrumb"><b>Admin Panel → Reports → Sales Reports</b></p>
+    <h3>What is it?</h3>
+    <p>Five headline sales numbers: Quotations Sent, Quotations Accepted, Quotations Rejected, Booking Value (excludes cancelled bookings), and Conversion Rate (accepted ÷ sent).</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Reports → Sales Reports</b>. Requires <code>view_reports</code>.</p>
+
+    <h2 id="marketing-reports" class="section-anchor">Marketing Reports</h2>
+    <p class="breadcrumb"><b>Admin Panel → Reports → Marketing Reports</b></p>
+    <h3>What is it?</h3>
+    <p>WhatsApp Sent/Delivered/Failed counts, a breakdown of the Follow-up Automation pipeline's per-lead states, and a Campaign Performance table (recipients/sent/failed per campaign).</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Reports → Marketing Reports</b>. Requires <code>view_reports</code>.</p>
+    <div class="callout limit">These numbers reflect real send attempts recorded in <a href="#whatsapp-messages">WhatsApp Messages</a> — see the note there about the current lack of configured WhatsApp credentials.</div>
+
+    <!-- ============================================================ ACCOUNT ============================================================ -->
+    <h2 id="security" class="section-anchor">Security</h2>
+    <p class="breadcrumb"><b>Admin Panel → Account → Security</b></p>
+    <h3>What is it?</h3>
+    <p>Your own account's session and sign-in activity — available to every signed-in user for their own account, regardless of role.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Account → Security</b>, or from the header's profile menu.</p>
+    <h3>How to use it</h3>
+    <ul>
+      <li><b>This device</b> shows your email, browser/OS, a masked IP address, and your last sign-in time.</li>
+      <li><b>Other sessions</b> — click the button here to sign every other browser/device out of your account immediately, useful if you signed in somewhere you no longer trust.</li>
+      <li><b>Recent sign-in activity</b> lists your last 20 sign-in attempts (success or failed) with time, IP, and browser/OS, so you can spot anything you don't recognise.</li>
+    </ul>
+    <div class="callout note">Changing your password itself is done from the profile menu's <b>Change Password</b> link, not from this page.</div>
+    <div class="card">
+      <img src="admin-user-guide-assets/profile-menu.png" alt="Profile menu open, showing account details and Sign out" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: profile-menu.png'}))">
+      <p class="shot-caption">The profile menu, opened from the header avatar.</p>
+    </div>
+
+    <!-- ============================================================ SETTINGS ============================================================ -->
+    <h2 id="whatsapp-settings" class="section-anchor">WhatsApp Settings</h2>
+    <p class="breadcrumb"><b>Admin Panel → Settings → WhatsApp Settings</b></p>
+    <h3>What is it?</h3>
+    <p>A configuration status page — it shows whether the server has the required WhatsApp/Meta credentials set up, plus reference information for connecting them.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Settings → WhatsApp Settings</b>. Requires any one of <code>manage_whatsapp_automation</code>, <code>manage_whatsapp_campaigns</code>, or <code>manage_whatsapp_templates</code>.</p>
+    <h3>How to use it</h3>
+    <ul>
+      <li><b>API Configuration</b> shows five pills — <b>Configured</b> or <b>Missing</b> — for the API token, phone number ID, app secret, webhook verify token, and cron secret. It shows presence only, never the actual values.</li>
+      <li><b>Integration Endpoints</b> lists the webhook and cron URLs a developer needs when wiring this up in Meta's dashboard or a scheduler.</li>
+      <li><b>Cron Setup</b> shows an example command for triggering the follow-up automation on a schedule.</li>
+      <li><b>Active Templates</b> lists all templates (any status, despite the name) with their Purpose and Status.</li>
+    </ul>
+    <div class="callout warn">
+      <b>This page cannot confirm delivery</b>
+      There is no test-send button and no delivery/health indicator here. "Configured" only means the server has the environment variable set — it is not proof that any message has ever been successfully delivered to a real WhatsApp number. As of this guide, none of these credentials have been configured in this environment.
+    </div>
+
+    <h2 id="error-logs" class="section-anchor">Error Logs</h2>
+    <p class="breadcrumb"><b>Admin Panel → Settings → Error Logs</b></p>
+    <h3>What is it?</h3>
+    <p>A viewer for server-side errors captured by the system — from scheduled jobs, the WhatsApp webhook, sign-in, and other background processes — the last 200, newest first.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Settings → Error Logs</b>. Requires <code>view_audit_logs</code>.</p>
+    <h3>How to use it</h3>
+    <p>Each row shows a Source badge (<span class="badge blue">cron</span> <span class="badge blue">webhook</span> <span class="badge amber">server_action</span> <span class="badge gray">api_route</span>), a Message, optional Context, and When it happened. Hover a truncated message or context value to see it in full.</p>
+    <div class="callout limit">
+      <b>Who can see this page</b>
+      Error Logs is only visible to accounts holding <code>view_audit_logs</code> — currently Super Admin and Admin/Manager. Sales Staff and Content Manager accounts will not see "Error Logs" under Settings at all; that's expected behaviour for those roles, not a bug.
+    </div>
+    <div class="card">
+      <img src="admin-user-guide-assets/error-logs.png" alt="Error Logs page" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: error-logs.png'}))">
+      <p class="shot-caption">The Error Logs viewer.</p>
+    </div>
+
+    <!-- ============================================================ REFERENCE ============================================================ -->
+    <h2 id="roles-permissions" class="section-anchor">Roles &amp; Permissions</h2>
+    <p class="lede">Access is controlled by permissions, not just role names — each screen and action checks for a specific permission, and your role determines which permissions you hold. The navigation rail automatically shows only what you have access to; opening a page directly without the right permission shows an "Access denied" message instead of the page's content.</p>
+
+    <div class="table-wrap"><table>
+      <tr><th>Role</th><th>Description (as configured in the system)</th></tr>
+      <tr><td><b>Super Admin</b></td><td>Full system access. Automatically granted every permission as it is created.</td></tr>
+      <tr><td><b>Admin / Manager</b></td><td>Operational management: leads, customers, packages, quotations, follow-ups.</td></tr>
+      <tr><td><b>Sales Staff</b></td><td>Handles assigned leads, customers, quotations, follow-ups.</td></tr>
+      <tr><td><b>Content Manager</b></td><td>Manages packages, itineraries, blog posts, FAQs, SEO.</td></tr>
+    </table></div>
+
+    <div class="callout limit">
+      <b>Creating accounts and changing roles</b>
+      There is currently no self-service "Manage Users &amp; Roles" screen inside the admin panel itself. If you need a new staff account created, your role changed, or a permission adjusted, contact your system administrator directly rather than looking for it in Settings.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="workflows" class="section-anchor">Common Workflows</h2>
+
+    <h3>New enquiry to confirmed booking</h3>
+    <div class="diagram">
+      <div class="dbox">New Lead</div><div class="darrow">→</div>
+      <div class="dbox">Create Quotation</div><div class="darrow">→</div>
+      <div class="dbox">Send to customer</div><div class="darrow">→</div>
+      <div class="dbox">Customer Accepts</div><div class="darrow">→</div>
+      <div class="dbox">Create Booking</div><div class="darrow">→</div>
+      <div class="dbox end">Confirmed</div>
+    </div>
+    <ol>
+      <li>Enquiry comes in — a <a href="#leads">Lead</a> is created (automatically from the website, or manually by staff).</li>
+      <li>Staff review the lead, set its Priority and Assignment, and start a <a href="#quotations">Quotation</a> from it.</li>
+      <li>Add packages and pricing, then send the quotation to the customer.</li>
+      <li>The customer opens the link and, once they accept, staff create a <a href="#bookings">Booking</a> from the quotation.</li>
+      <li>Staff record payments and move the booking through Pending → Confirmed → Completed as the trip progresses.</li>
+    </ol>
+
+    <h3>Publishing a new website page</h3>
+    <ol>
+      <li>Create the page under <a href="#pages">Pages</a> — it starts as a Draft.</li>
+      <li>Open its <a href="#page-builder">Page Builder</a> and add/arrange content blocks.</li>
+      <li>Fill in SEO fields if you have access to them.</li>
+      <li>Change Status to Published once it's ready (requires <code>publish_pages</code>).</li>
+    </ol>
+
+    <!-- ============================================================ -->
+    <h2 id="troubleshooting" class="section-anchor">Troubleshooting</h2>
+
+    <h3>I can't see a menu item I expect to see</h3>
+    <p>The navigation only shows sections and pages your account has permission for. If a colleague sees something you don't, that's most likely a difference in role/permissions, not a bug — see <a href="#roles-permissions">Roles &amp; Permissions</a>, and ask your administrator if you believe you should have access.</p>
+
+    <h3>I'm locked out after entering my password wrong a few times</h3>
+    <p>After 5 failed attempts for the same account within 10 minutes, sign-in is temporarily blocked. Wait about 10 minutes and try again, or use <b>Forgot password?</b> on the sign-in screen. This is not something an administrator needs to manually clear — it resets on its own.</p>
+
+    <h3>A WhatsApp message was not delivered</h3>
+    <p>First, check <a href="#whatsapp-messages">WhatsApp Messages</a> for that lead — if the status shows <b>Failed</b>, the send attempt genuinely did not go through. Then check <a href="#whatsapp-settings">WhatsApp Settings</a>: if any of the five API Configuration items show <b>Missing</b>, no WhatsApp message can be delivered at all until an administrator configures the missing credential(s) with Meta. As of this guide, this environment has never had those credentials configured, so WhatsApp sending has not yet been verified end-to-end — this is a known, expected limitation rather than something to try to fix yourself. Contact your administrator or developer.</p>
+
+    <h3>I published a page but the change isn't showing on the website</h3>
+    <p>Confirm the page's Status is actually <b>Published</b> (not Draft). If you're editing the homepage, remember its content lives under <a href="#homepage-sections">Homepage Sections</a>, not a separate settings screen. If you edited a Menu, check that the menu has at least one item and is assigned to the right Location — an empty or missing menu silently falls back to the site's built-in default links.</p>
+
+    <h3>I added a Package Listing or Destination Listing block and nothing shows</h3>
+    <p>This is expected — see the note under <a href="#page-builder">Page Builder</a>. These two block types exist in the builder but are not yet rendered on the public site.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="guide-faq" class="section-anchor">FAQ</h2>
+
+    <h3>Is my data backed up?</h3>
+    <p>ConnectMyTours's database runs on Supabase's hosted infrastructure, which provides its own backup capabilities. The specific backup retention window and recovery process for this project have not yet been independently verified by the ConnectMyTours team as of this guide — please check with your administrator for the current, confirmed backup policy rather than assuming a specific retention period.</p>
+
+    <h3>Can I delete a lead or booking I created by mistake?</h3>
+    <p>No — leads and bookings are never deleted from the system by design, to preserve a complete history. Instead, move a lead's status to Not Interested, Lost, or Cancelled, or a booking's status to Cancelled.</p>
+
+    <h3>Why can Sales Staff not see Reports or the Dashboard's numbers?</h3>
+    <p>Reporting is scoped to Admin/Manager and Super Admin because Sales Staff sessions only have visibility into their own assigned leads — showing them a "company-wide" number computed under their own restricted view would be misleading, not just incomplete, so it's hidden rather than shown wrong.</p>
+
+    <h3>Does the system automatically send WhatsApp messages?</h3>
+    <p>The Follow-up Automation engine and Campaigns feature are both built to do so once WhatsApp/Meta credentials are configured for this environment — see the note at the top of the <a href="#automation">Marketing</a> section. Until then, any attempted send will log as Failed in <a href="#whatsapp-messages">WhatsApp Messages</a>.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="glossary" class="section-anchor">Glossary</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td>Lead</td><td>One customer enquiry, the starting point of the pipeline.</td></tr>
+      <tr><td>Quotation</td><td>A priced proposal built from packages, sent to a customer.</td></tr>
+      <tr><td>Booking</td><td>A confirmed trip, created from an accepted quotation.</td></tr>
+      <tr><td>Customer</td><td>A person's contact record, shared across their leads/bookings over time.</td></tr>
+      <tr><td>Package</td><td>A sellable tour product with pricing, content, and images.</td></tr>
+      <tr><td>Rack Rate / B2B Rate</td><td>Two of a package's price types — the public/standard rate and the trade/partner rate.</td></tr>
+      <tr><td>Page Builder</td><td>The block-based editor used to build CMS Pages, including the homepage.</td></tr>
+      <tr><td>Block</td><td>One reusable content section inside the Page Builder (e.g. Hero, Gallery, FAQ).</td></tr>
+      <tr><td>Campaign</td><td>A bulk WhatsApp send to leads matching a status filter.</td></tr>
+      <tr><td>Permission</td><td>A single named capability (e.g. <code>manage_packages</code>) checked to decide what you can see or do.</td></tr>
+      <tr><td>Role</td><td>A named bundle of permissions assigned to a staff account (Super Admin, Admin/Manager, Sales Staff, Content Manager).</td></tr>
+      <tr><td>RLS</td><td>Row Level Security — the database-level rule enforcement behind every permission check, so access is enforced even if a screen were bypassed.</td></tr>
+    </table></div>
+
+    <!-- ============================================================ -->
+    <h2 id="version-status" class="section-anchor">Version &amp; Status</h2>
+    <div class="card">
+      <p><b>Phase:</b> 8</p>
+      <p><b>Status:</b> Documentation of current implemented functionality.</p>
+      <p>This guide describes the ConnectMyTours admin panel as it is actually built and behaves today. It is not a statement that Phase 8 is fully closed, and it is not a claim that the application has been deployed to production. WhatsApp/Meta credentials have not been configured in this environment, so WhatsApp delivery is configured but not verified — see the <a href="#automation">Marketing</a> section. Database backup retention has not been independently verified — see the <a href="#guide-faq">FAQ</a>. This guide will be updated as the admin panel's real functionality changes.</p>
+    </div>
+
+    <footer class="doc-footer">
+      <p>ConnectMyTours Admin User Guide — reflects the implemented admin panel as of Phase 8.</p>
+    </footer>
+
+  </main>
+</div>
+
+<button id="backtotop" type="button">↑ Top</button>
+
+<script>
+(function(){
+  var toc = document.getElementById('toc');
+  var overlay = document.getElementById('tocOverlay');
+  var toggle = document.getElementById('tocToggle');
+  function openToc(){ toc.classList.add('open'); overlay.classList.add('show'); }
+  function closeToc(){ toc.classList.remove('open'); overlay.classList.remove('show'); }
+  toggle.addEventListener('click', function(){ toc.classList.contains('open') ? closeToc() : openToc(); });
+  overlay.addEventListener('click', closeToc);
+  toc.addEventListener('click', function(e){ if (e.target.tagName === 'A' && window.innerWidth < 1024) closeToc(); });
+
+  // Smooth scroll + hash update without native jump
+  document.querySelectorAll('.toc a[href^="#"]').forEach(function(link){
+    link.addEventListener('click', function(e){
+      var id = link.getAttribute('href').slice(1);
+      var target = document.getElementById(id);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({behavior:'smooth', block:'start'});
+      history.replaceState(null, '', '#' + id);
+    });
+  });
+
+  // Scroll-spy
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.content [id]'));
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  var current = null;
+  function setActive(id){
+    if (id === current) return;
+    current = id;
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var l = linkById[id];
+    if (l) { l.classList.add('active'); l.scrollIntoView({block:'nearest'}); }
+  }
+
+  var io = new IntersectionObserver(function(entries){
+    var visible = entries.filter(function(en){ return en.isIntersecting; });
+    if (visible.length === 0) return;
+    visible.sort(function(a,b){ return a.boundingClientRect.top - b.boundingClientRect.top; });
+    setActive(visible[0].target.id);
+  }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+
+  sections.forEach(function(s){ if (linkById[s.id]) io.observe(s); });
+
+  // Back to top
+  var backBtn = document.getElementById('backtotop');
+  window.addEventListener('scroll', function(){
+    backBtn.classList.toggle('show', window.scrollY > 500);
+    // The last section can't always reach the IntersectionObserver's trigger
+    // band, since the page has no room to scroll further past it — force it
+    // active once we're within a few px of the true document bottom.
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+      setActive(sections[sections.length - 1].id);
+    }
+  });
+  backBtn.addEventListener('click', function(){
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+
+  // Lightweight client-side search over TOC link text
+  var searchInput = document.getElementById('tocSearch');
+  searchInput.addEventListener('input', function(){
+    var q = searchInput.value.trim().toLowerCase();
+    document.querySelectorAll('.toc li').forEach(function(li){
+      var text = li.textContent.toLowerCase();
+      li.classList.toggle('hidden-by-search', q.length > 0 && text.indexOf(q) === -1);
+    });
+  });
+
+  // If the page loads with a hash, scroll to it after layout settles
+  if (location.hash) {
+    var t = document.getElementById(location.hash.slice(1));
+    if (t) setTimeout(function(){ t.scrollIntoView({block:'start'}); }, 50);
+  }
+})();
+</script>
+</body>
+</html>

@@ -181,7 +181,17 @@ function Header({ onMobileMenuClick, userEmail, userRole, userName, logoutAction
           <Image src="/logo.svg" alt="Connect My Tours" width={140} height={49} priority className="h-8 w-auto" />
         </Link>
       </div>
-      <ProfileMenu userEmail={userEmail} userRole={userRole} userName={userName} logoutAction={logoutAction} />
+      <div className="flex items-center gap-4">
+        <a
+          href="/admin-user-guide.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden text-sm font-medium text-gray-500 hover:text-gray-900 sm:block"
+        >
+          How to Use
+        </a>
+        <ProfileMenu userEmail={userEmail} userRole={userRole} userName={userName} logoutAction={logoutAction} />
+      </div>
     </header>
   );
 }
