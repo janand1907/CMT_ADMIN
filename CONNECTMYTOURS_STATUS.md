@@ -1340,6 +1340,92 @@ reasonable derived metrics for them, that is new, separately-scoped work.
 
 ---
 
+## Phase 7.1 — Admin UX, Navigation, Branding & Auto-Logout Fix
+
+A focused maintenance/UX sub-task on the admin panel, not a master-plan-numbered phase. Four
+objectives: compact navigation, fix auto-logout/session expiration, use the original logo, apply
+the existing theme color consistently. No Phase 7 report calculations/metrics/permissions were
+touched.
+
+**Navigation:** `components/admin/AdminShell.jsx` — nav item padding `px-3 py-2` → `px-2.5 py-1.5`,
+section gaps `space-y-6` → `space-y-4`, section-header text `text-xs` → `text-[11px]`. Active
+state changed from a flat `bg-primary-50` tint to the same tint plus a `border-l-2 border-primary-600`
+left-accent indicator (a layout idea taken from the attached Supabase screenshots — the accent
+color itself is ConnectMyTours' own `primary-600`, not Supabase's). Sidebar width `w-64` → `w-60`.
+All existing routes/sections/permission-based filtering are unchanged — `navConfig.js` was not
+touched at all, so nothing was removed or re-permissioned. Verified: all 8 sections and every
+route render identically to before, mobile menu opens/closes/scrolls/auto-closes-on-navigate
+correctly, and `/admin/reports/leads` still renders the exact same data as Phase 7 (2 leads,
+matching every breakdown) — confirming zero regression. No collapsed/expandable sidebar was
+added — out of scope per the explicit "do not overengineer" instruction; the objective was
+density, not a new interaction model.
+
+**Branding:** `public/logo.svg` — the same original asset already used on the public site's
+Navbar/Footer, not a new or regenerated logo — added to the sidebar header (desktop + mobile) via
+a new `BrandLink` component, and to all three public admin auth pages (login, forgot-password,
+reset-password) via a new shared `components/admin/AuthCard.jsx` wrapper. Theme color source:
+`tailwind.config.js`'s existing `primary` scale (sampled from the logo itself, already used
+correctly by `components/admin/ui/Button.jsx`'s "primary" variant and `FormControls.jsx`'s focus
+rings — those primitives were never the problem). The actual disconnect was the three auth pages
+hand-rolling their own `bg-gray-900` buttons and raw `<input>`/`<label>` markup instead of using
+those already-correctly-branded shared components — fixed by switching all three to `Button`/
+`Field`/`Input`, which is a consistency fix, not new styling invented. Sidebar active-state accent
+and "Forgot password?"/"Back to sign in" link hover states also switched from gray to
+`primary-600`. No other admin components were restyled — Cards/Tables/Badges/etc. elsewhere
+already used the primary/secondary scales appropriately (confirmed by inspection before touching
+anything), so this stayed a targeted fix, not a redesign pass.
+
+**Auto-logout root cause:** the codebase had zero `onAuthStateChange` listeners anywhere. Server
+middleware (`middleware.js`) already correctly re-validates the session on every request and
+redirects to login — that part was never broken. The actual gap: `/admin/security` already has a
+working "Sign out other sessions" feature (`signOutOtherSessions()` → `supabase.auth.signOut({scope:
+"others"})`, revoking every other session's refresh token server-side) with no way to notify an
+already-open tab on one of those other sessions — it would keep rendering as if logged in until
+its next full server round-trip. The same gap applies to a natural refresh-token
+expiry/revocation discovered by the browser SDK's background auto-refresh. `supabase/config.toml`
+already contains a commented-out `[auth.sessions]` `inactivity_timeout`/`timebox` block — this is
+generic Supabase CLI scaffold boilerplate present in every `supabase init` project by default, not
+a ConnectMyTours-specific requirement, and was deliberately left untouched: enabling it would mean
+inventing a specific duration nobody has actually decided on, which the explicit instruction for
+this task forbids.
+
+**Fix:** `useAuthStateRedirect()` in `AdminShell.jsx` — a `useEffect` that subscribes to
+`supabase.auth.onAuthStateChange()` (the browser client) and does a hard `window.location.href =
+"/admin/login"` navigation whenever the resulting session is null. This is the standard,
+officially-documented Supabase pattern for exactly this problem — not a client-side security
+boundary (middleware/RLS remain the actual enforcement) and not an invented inactivity timer; it
+makes an already-invalidated session (by any of the existing revocation paths) stop being usable
+immediately instead of only on the user's next navigation.
+
+**Verification performed:** `npm run lint` and `npm run build` clean. No database changes, so no
+migration check applies. Browser-verified (throwaway Admin/Manager account, created/used/deleted,
+cleanup confirmed via direct `SELECT`): login/forgot-password/reset-password all render the real
+logo and primary-branded controls; the dashboard/sidebar render compactly with all sections and
+the correct active-state accent (full page fits without scrolling vs. requiring significant
+scroll before); mobile nav opens, scrolls to reveal every section including Reports, closes on
+navigation, and the destination page renders correctly; `/admin/security`'s "Sign out other
+sessions" button executes without error and correctly leaves the acting session logged in (its
+own session is never revoked by `scope: "others"`).
+
+**Known verification gap, stated plainly rather than overclaimed:** the specific
+cross-tab/cross-device trigger — a *different*, genuinely independent session having its refresh
+token revoked and that tab's `onAuthStateChange` firing and redirecting it — was not directly
+fired-and-observed in this session. Playwright's tooling shares one cookie jar across all tabs in
+a context, so two tabs there are the same login session, not two independent devices; a true
+multi-device simulation would need two fully separate browser contexts, which was judged
+disproportionate effort for this fix given the mechanism itself (`onAuthStateChange` firing
+`SIGNED_OUT` on a failed/revoked refresh) is core, extensively-documented Supabase Auth SDK
+behavior, not custom logic. If this specific path ever needs empirical proof, it requires two
+separate browser contexts/profiles, not two tabs.
+
+**Bugs:** None found beyond the diagnosed auto-logout gap itself, which is the fix, not a
+regression. No Phase 7 regression: report pages, metrics, and `view_reports` permission gating
+are all unchanged and were re-confirmed rendering identical data during this session's testing.
+
+**Current status: COMPLETE ✅**
+
+---
+
 ## Phase 8 — Production Hardening
 
 **Purpose (master plan §15):** Security review, permission testing, validation, error
@@ -1377,7 +1463,7 @@ Phase 0 (CLOSED) → Phase 1 (CLOSED) → Phase 2 (CLOSED) → Phase 3 (CLOSED) 
 Phase 3.5 (CLOSED) → Phase 4 (IN PROGRESS — QA INCOMPLETE) → Phase 5 (CLOSED) →
 Phase 6 (CLOSED — Packages/Destinations permanently excluded, see Phase 6 section) →
 Phase 7 (CLOSED — Booking/Conversion/Package/Destination/Staff reports excluded, see Phase 7
-section) → Phase 8
+section) → Phase 7.1 (COMPLETE — admin UX/branding/auto-logout, see Phase 7.1 section) → Phase 8
 
 ## Current Next Action
 
@@ -1446,5 +1532,21 @@ explicit user decision, not a gap glossed over. `npm run lint`, `npm run build`,
 supabase migration list` (local == remote, all 14 migrations) are clean. No bugs in the Phase 7
 code; one dev-environment artifact (two concurrent `next dev` processes corrupting the route
 manifest, unrelated to any Phase 7 code) was hit and resolved during testing.
+
+Phase 7.1 — Admin UX, Navigation, Branding & Auto-Logout Fix — is now **COMPLETE**. Compacted the
+admin sidebar (all sections now fit one screen without scrolling), added the real ConnectMyTours
+logo to the sidebar and all three auth pages, fixed the three auth pages' hand-rolled gray
+buttons/inputs to use the already-correctly-branded shared `Button`/`Field`/`Input` components,
+and diagnosed + fixed the actual auto-logout gap: zero `onAuthStateChange` listeners existed
+anywhere, so an already-open tab never learned its session had been invalidated (by
+`/admin/security`'s existing "Sign out other sessions" or a natural refresh-token
+expiry/revocation) until its next server round-trip. No inactivity-timeout duration was invented
+— `supabase/config.toml`'s commented-out `[auth.sessions]` block is generic CLI boilerplate, not
+a project requirement. `npm run lint`/`npm run build` clean; no DB changes. No Phase 7 regression
+(report pages/metrics/`view_reports` permission re-confirmed identical). One verification
+boundary stated plainly rather than overclaimed: the specific cross-device revoke-then-redirect
+trigger wasn't directly fired-and-observed (Playwright's tabs share one cookie jar, not
+independent devices) — the mechanism itself is standard, documented Supabase SDK behavior, not
+custom logic.
 
 Phase 8 remains **not started**.
