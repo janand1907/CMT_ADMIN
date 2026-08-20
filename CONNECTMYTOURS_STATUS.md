@@ -1442,6 +1442,46 @@ by storing string keys and resolving them to components inside the Client Compon
 bugs. No Phase 7 regression: report pages, metrics, and `view_reports` permission gating are all
 unchanged and were re-confirmed rendering identical data during this session's testing.
 
+**Final correction — header, permanent submenu, and dashboard chart variety (same sub-task):**
+A follow-up round corrected two things based on direct user feedback after seeing the previous
+pass running live.
+
+*Navigation:* Replaced the single-layer icon rail (hover = per-item flyout with routes) with the
+two-independent-layers architecture actually specified: a permanent top header
+(`components/admin/AdminShell.jsx`'s `Header`) with the logo and a `ProfileMenu` (circular
+avatar, initials from `full_name`/email, opens on click, closes on outside-click/Escape, contains
+Change Password + Sign out — reuses the existing `/admin/reset-password` flow as-is for "Change
+Password" rather than building a second mechanism, since it already accepts any authenticated
+session, not only a recovery link) — removing the old email/role/sign-out block from both the
+desktop rail and the mobile drawer, which are now navigation-only. Below the header: an icon rail
+whose hover reveals the *whole* rail as one `position: absolute` overlay (icon + label for every
+group at once), and a separate, always-visible "permanent submenu" column whose content is driven
+by `selectedLabel` — synced to the current route on mount/navigation, and changed only by clicking
+a rail icon, never by hover. Clicking a rail icon pins the permanent submenu to that group without
+navigating; only clicking an actual item inside the permanent submenu navigates. Verified
+precisely, not just visually: a scripted hover recorded the Dashboard heading's bounding box as
+byte-identical across pre-hover/mid-hover/post-hover (zero reflow), hovering CRM then Inventory
+left the permanent submenu reading "OVERVIEW" throughout (hover never touches it), clicking CMS
+inside the expanded overlay changed the permanent submenu to CMS without navigating, and a direct
+load of `/admin/crm/quotations` (not a client-side click) correctly pre-selected CRM on the rail
+and Quotations in the submenu. One correctness fix during this pass: the collapsed rail's buttons
+were left in the DOM underneath the overlay, so two same-labelled "CMS" buttons existed
+simultaneously (one blocked from receiving clicks) — fixed by marking the collapsed rail
+`aria-hidden`/`inert` while the overlay is open.
+
+*Dashboard:* The first pass used only horizontal progress-bar-style bars for all four
+visualizations; the user asked for genuine chart-type variety (pie/donut, line, bar). Now: a
+dependency-free SVG donut (`DonutChart.jsx`, stroke-dasharray technique) for Lead Status
+Distribution, an SVG line chart (`LineChart.jsx`) for a new "Leads Over Time" 14-day trend (reuses
+the exact `istDateLabel` day-bucketing rule already established for Lead Reports' "date-wise"
+breakdown — master plan §12 — just windowed and zero-filled for a continuous line, not a new
+metric), the existing horizontal `BarChart.jsx` for Lead Source Distribution, and a new
+`VerticalBarChart.jsx` (plain CSS columns) for Quotation Outcomes. Booking Status Distribution was
+dropped from the dashboard grid (kept the total at 4, per "don't overload" — the data is a single
+row today and the "Confirmed Bookings" KPI card already surfaces the only meaningful part of it).
+No charting library was added; all four remain plain SVG/CSS. No new business metrics — every
+chart groups fields already fetched for the existing KPI cards.
+
 **Current status: COMPLETE ✅**
 
 ---
