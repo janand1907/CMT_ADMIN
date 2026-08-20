@@ -7,7 +7,11 @@ import { navLinks } from "@/data/nav";
 import NavDropdown from "./NavDropdown";
 import MobileMenu from "./MobileMenu";
 
-export default function Navbar() {
+// links: optional CMS "header" menu (see lib/cms/publicQueries.getMenuByLocation),
+// already shaped to match navLinks. Falls back to the static data/nav.js list
+// when no CMS header menu exists yet — true today since none has been created.
+export default function Navbar({ links }) {
+  const items = links && links.length > 0 ? links : navLinks;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -46,7 +50,7 @@ export default function Navbar() {
         </Link>
 
         <ul className="hidden items-center gap-6 md:flex">
-          {navLinks.map((item) =>
+          {items.map((item) =>
             item.children ? (
               <li key={item.href}>
                 <NavDropdown item={item} />
@@ -84,7 +88,7 @@ export default function Navbar() {
 
       {mobileOpen && (
         <MobileMenu
-          navLinks={navLinks}
+          navLinks={items}
           onNavigate={() => setMobileOpen(false)}
         />
       )}

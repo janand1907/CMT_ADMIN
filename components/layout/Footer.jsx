@@ -11,7 +11,12 @@ import {
   MapPinIcon,
 } from "@/components/icons";
 
-export default function Footer() {
+// links: optional CMS "footer" menu, same fallback pattern as Navbar's `links`
+// prop. The bottom legal-links row (Privacy/Terms/Cancellation/Disclaimer) is
+// deliberately left hardcoded — it isn't sourced from footerQuickLinks today
+// either, so CMS integration doesn't change that.
+export default function Footer({ links }) {
+  const quickLinks = links && links.length > 0 ? links : footerQuickLinks;
   return (
     <footer className="bg-primary-900 text-white">
       <div className="container-page grid gap-12 py-14 sm:grid-cols-2 lg:grid-cols-3 lg:gap-16 lg:py-16">
@@ -40,7 +45,7 @@ export default function Footer() {
             Quick Links
           </h3>
           <ul className="mt-5 space-y-2.5 text-sm text-white/80">
-            {footerQuickLinks.map((link) => (
+            {quickLinks.map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className="transition hover:text-white">
                   {link.label}

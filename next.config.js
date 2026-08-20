@@ -1,3 +1,9 @@
+// Derived at build time so this isn't hardcoded to one Supabase project — matches
+// the getMediaUrl() helper's own URL shape (lib/media.js) exactly.
+const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : undefined;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -10,6 +16,11 @@ const nextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    // Phase 6: public pages render CMS/Storage-hosted images (getMediaUrl()) via
+    // next/image, which requires every remote host to be allow-listed explicitly.
+    remotePatterns: supabaseHostname
+      ? [{ protocol: "https", hostname: supabaseHostname, pathname: "/storage/v1/object/public/**" }]
+      : [],
   },
   async redirects() {
     return [
