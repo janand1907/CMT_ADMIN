@@ -1227,38 +1227,116 @@ all 13 migrations) are clean.
 
 ## Phase 7 — Reports & Analytics
 
-**Purpose (master plan §15):** Dashboard, lead analytics, sales analytics, conversion
-reports, package performance, destination performance, staff performance, marketing
-performance.
+**Scope reconciliation (2026-08-20):** §12 "Reports & Analytics" is the master plan's only
+section with actual metric definitions — Dashboard KPIs, Lead Reports, Sales Reports, Marketing
+Reports, each with a concrete itemized list. §2 (Admin Panel menu structure) and §15 (Phase 7
+summary) additionally name **Booking Reports, Conversion Reports, Package Performance,
+Destination Performance, Staff Performance** as Reports-menu items / phase highlights, but no
+metric, calculation, or field is defined for any of them anywhere in the document — named but
+undefined, the same shape of gap as Phase 6's Packages/Destinations. Per explicit user decision,
+**only §12's 4 defined categories were built**; the other 5 names are intentionally not present
+as pages, per "if the master plan doesn't define it, leave it out." Two smaller ambiguities were
+also resolved by explicit decision: (1) §2 lists "Lead conversion rate" and "Quotation conversion
+rate" separately, §12 lists one unqualified "Conversion rate" — **both are shown separately** on
+the Dashboard; (2) "Booking value" has no stated rule for cancelled bookings — **cancelled
+bookings are excluded** (`booking_status != 'cancelled'`), consistent with "Confirmed bookings"
+being tracked as its own separate KPI. No chart library exists in the project and §12 never
+mentions charts — KPIs/reports are numeric cards and tables via the existing `StatCard`/`Table`
+components, not visualizations.
 
-**Exact features (master plan §12):**
-- Dashboard KPIs: today's enquiries, new leads, pending quotations, follow-ups due, confirmed
-  bookings, lost leads, conversion rate, quotation value
-- Lead reports: date-wise, source-wise, destination-wise, package-wise, staff-wise,
-  status-wise
-- Sales reports: quotations sent/accepted/rejected, booking value, conversion rate
-- Marketing reports: WhatsApp messages sent/delivered/failed, follow-up activity, campaign
-  performance
+**Implementation:**
+- **Permission:** `view_reports` (new, `supabase/migrations/20260821100000_phase7_reports_permission.sql`),
+  granted only to Admin/Manager (+ Super Admin automatically via the existing
+  `auto_grant_super_admin` trigger) — matches §10 listing "Reports" only under that role. No new
+  RLS policies anywhere else: Admin/Manager already holds `view_leads_all`,
+  `view_quotations_all`, `view_bookings_all`, `view_whatsapp_messages_all`,
+  `manage_whatsapp_automation`, and `manage_whatsapp_campaigns` from Phase 1/3/3.5/4, which
+  already grant full read visibility on every table these reports read from.
+- **Data layer:** `lib/reports/queries.js` — `getDashboardKpis`, `getLeadReports`,
+  `getSalesReports`, `getMarketingReports`, each taking the caller's own session-scoped client
+  (never service-role) and returning `{ data }` or `{ error }` explicitly — callers must render
+  an error state, never treat a failed query as empty/zero. Aggregation is one lean-column query
+  per table, reduced in JS (not a SQL view/function — justified by scale: a single small travel
+  agency's CRM, not a high-volume dataset); raw rows never reach the browser.
+- **Routes:** `/admin/reports/leads`, `/admin/reports/sales`, `/admin/reports/marketing` (new),
+  plus the existing `/admin/dashboard` extended with the KPI section. All four check
+  `view_reports` server-side (not just nav-hidden) and render an explicit "Access denied" state
+  when absent — verified: nav hides "Reports" for Sales Staff, and direct URL access to
+  `/admin/reports/leads`/`/admin/reports/sales` independently denies with the correct message.
+  The Dashboard gates its entire KPI section the same way rather than showing a partial number:
+  Sales Staff's session is RLS-scoped to their own assigned leads (`view_leads_own`), so a
+  "company-wide" KPI computed under their session would be silently wrong (their own subset,
+  presented as if it were the total), not just hidden — gating the whole section avoids that.
+- **UI:** `components/admin/reports/BreakdownTable.jsx` (shared `[{label, count}]` renderer for
+  Lead Reports' six breakdowns), reusing the existing `Card`/`StatCard`/`Table`/`Badge`/
+  `EmptyState`/`ErrorState` admin design-system components throughout — no new visual language.
 
-**Database objects:** None new — aggregates/reads from Phase 1 (`leads`), Phase 3
-(`quotations`), Phase 3.5 (`bookings`), Phase 4 (`whatsapp_messages`, `campaigns`) tables.
+**Metric definitions (every rule explicit, none guessed):**
+| Metric | Source | Rule |
+|---|---|---|
+| Today's enquiries | `leads.created_at` | Created today in IST (fixed +5:30, no DST) |
+| New leads | `leads.status` | `= 'new'` (current pipeline snapshot) |
+| Pending quotations | `quotations.status` | `IN ('draft','sent','viewed')` |
+| Follow-ups due | `lead_followups` | `completed=false AND scheduled_at < now()` (same as the existing Follow-ups "overdue" view) |
+| Confirmed bookings | `bookings.booking_status` | `= 'confirmed'` |
+| Lost leads | `leads.status` | `= 'lost'` (distinct from `not_interested`/`cancelled`, which the schema tracks separately) |
+| Lead conversion rate | `leads` | confirmed / total leads, all-time |
+| Quotation conversion rate | `quotations` | accepted / sent (`sent_at is not null`) |
+| Quotation value | `quotations.total_amount` | sum, excludes `rejected`/`expired` |
+| Lead Reports date/source/destination/package/staff/status-wise | `leads` (+ `lead_sources`, `users`) | grouped by literal field value, "Unspecified"/"Unassigned" when blank; destination/package_interested are free-text fields on `leads`, not FKs into the Phase 2 catalog |
+| Quotations sent/accepted/rejected | `quotations` | `sent_at is not null` / `status='accepted'` / `status='rejected'` |
+| Booking value | `bookings.total_amount` | sum, excludes `booking_status='cancelled'` |
+| WhatsApp sent/delivered/failed | `whatsapp_messages.status` | funnel `queued→sent→delivered→read`/`failed`: sent = not queued/failed, delivered = subset confirmed delivered, failed = terminal failure |
+| Follow-up activity | `lead_followup_automation_state` | grouped by `status`, summed `messages_sent` |
+| Campaign performance | `campaigns` | listed directly — table already carries `total_recipients`/`sent_count`/`failed_count` |
 
-**Admin routes (planned — master plan §2 Reports menu):** Lead Reports, Quotation Reports,
-Booking Reports, Conversion Reports, Package Performance, Destination Performance, Staff
-Performance, Marketing Performance
+**Verification:**
+- `npm run lint` — clean (only pre-existing `<img>` warnings in untouched files).
+- `npm run build` — clean; all 4 new/changed routes compile.
+- `npx supabase migration list` — local == remote, all 14 migrations.
+- **Data correctness** — independently hand-calculated every metric against the real database
+  (2 leads, 1 quotation, 1 booking, 0 WhatsApp/campaign activity — Phase 4's Meta blocker means
+  zero messages have ever actually been sent, so empty states there are correct, not a bug), then
+  confirmed via a real authenticated browser session (see below) that the application renders
+  exactly those values: Today's Enquiries 0, New Leads 0, Pending Quotations 0, Follow-ups Due 0,
+  Confirmed Bookings 0 (the one booking is `completed`, not `confirmed` — a real, deliberate
+  distinction the KPI correctly makes), Lost Leads 0, Lead Conversion Rate 50%, Quotation
+  Conversion Rate 100%, Quotation Value ₹27,000; Lead Reports' six breakdowns matched row-for-row;
+  Sales Reports (sent 1/accepted 1/rejected 0/booking value ₹27,000/conversion 100%) and Marketing
+  Reports (correct empty states) matched exactly.
+- **Browser (targeted, user-confirmed before the live write it required)** — created two
+  throwaway accounts (Admin/Manager, Sales Staff — same pattern as the Phase 5 closure session:
+  created, used, deleted immediately after, cleanup confirmed via a direct `SELECT` returning
+  zero rows). Logged in as each: Admin/Manager sees all 4 pages with the exact expected numbers
+  and zero console errors; Sales Staff sees no "Reports" nav section, the Dashboard correctly
+  shows no KPI section (not a wrong/partial one), and direct URL access to the report routes
+  independently denies with "Access denied — You don't have permission to view reports." This was
+  necessary because it's the one thing source-reading can't verify: a real Supabase Auth session,
+  RLS, and full React render together.
 
-**Server actions / API:** None yet.
+**Bugs:** None in the Phase 7 code. One environment artifact during testing, not a code
+defect: two `next dev` processes were briefly running concurrently against the same `.next`
+build directory (leftover from an earlier session), corrupting the route manifest and causing
+every admin route — including pre-existing ones untouched by Phase 7 — to 404 regardless of
+session state. Resolved by killing all Next processes, clearing `.next`, and restarting a single
+clean instance; re-verified cleanly afterward.
 
-**External integrations:** None specified.
+**Scope intentionally not implemented:** Booking Reports, Conversion Reports, Package
+Performance, Destination Performance, Staff Performance — named in §2/§15 but never defined in
+§12, per the reconciliation above. Not a gap glossed over: if the master plan is later amended
+with concrete definitions for any of these, or a business decision authorizes constructing
+reasonable derived metrics for them, that is new, separately-scoped work.
 
-**Dependencies on previous phases:** Phase 1, Phase 3, Phase 3.5, Phase 4 (all source data).
+**Current status: CLOSED ✅**
 
-**Acceptance requirements:** Full QA governance framework above, with particular attention to
-Rule 2 (Mandatory Testing Model) since report correctness depends entirely on accurate
-database reads.
+**Database objects:** One new migration (permission only, no new tables/RLS — see above).
 
-**Current status: NOT STARTED**
-Evidence: no reporting code or routes exist.
+**Admin routes:** `/admin/reports/leads`, `/admin/reports/sales`, `/admin/reports/marketing`
+(new); `/admin/dashboard` (extended).
+
+**Dependencies on previous phases:** Phase 1 (`leads`, `lead_sources`, `lead_followups`), Phase 3
+(`quotations`), Phase 3.5 (`bookings`), Phase 4 (`whatsapp_messages`, `campaigns`,
+`lead_followup_automation_state`) — all read-only, no schema changes to any of them.
 
 ---
 
@@ -1297,8 +1375,9 @@ Evidence: no hardening pass has been performed; current phase is still Phase 0.
 
 Phase 0 (CLOSED) → Phase 1 (CLOSED) → Phase 2 (CLOSED) → Phase 3 (CLOSED) →
 Phase 3.5 (CLOSED) → Phase 4 (IN PROGRESS — QA INCOMPLETE) → Phase 5 (CLOSED) →
-Phase 6 (CLOSED — Packages/Destinations permanently excluded, see Phase 6 section) → Phase 7 →
-Phase 8
+Phase 6 (CLOSED — Packages/Destinations permanently excluded, see Phase 6 section) →
+Phase 7 (CLOSED — Booking/Conversion/Package/Destination/Staff reports excluded, see Phase 7
+section) → Phase 8
 
 ## Current Next Action
 
@@ -1354,4 +1433,18 @@ Commits: `8c2ea6f` (feat: implement phase 6 website integration), `c4c4055` (doc
 `936d8fa` (fix: open_in_new_tab), plus this closure documentation update. Nothing pushed to any
 remote; production (`https://connectmytours.com`) untouched.
 
-Phase 7 and Phase 8 remain **not started**.
+Phase 7 — Reports & Analytics — is now **CLOSED**. Dashboard KPIs, Lead Reports, Sales Reports,
+and Marketing Reports (§12's only defined categories) are implemented, permission-gated
+(`view_reports`, Admin/Manager only — reusing the `_all` view permissions Admin/Manager already
+held from Phase 1/3/3.5/4, no new RLS), and verified: every metric was independently
+hand-calculated against the real database and then confirmed rendering exactly those values in a
+real authenticated browser session (throwaway Admin/Manager and Sales Staff accounts, same
+create-use-delete pattern as the Phase 5 closure session, cleanup confirmed via direct `SELECT`).
+Booking Reports, Conversion Reports, Package Performance, Destination Performance, and Staff
+Performance — named in §2/§15 but never defined in §12 — are intentionally not built, per
+explicit user decision, not a gap glossed over. `npm run lint`, `npm run build`, and `npx
+supabase migration list` (local == remote, all 14 migrations) are clean. No bugs in the Phase 7
+code; one dev-environment artifact (two concurrent `next dev` processes corrupting the route
+manifest, unrelated to any Phase 7 code) was hit and resolved during testing.
+
+Phase 8 remains **not started**.
