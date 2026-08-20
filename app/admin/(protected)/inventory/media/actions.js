@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { getPermissions } from "@/lib/auth/getPermissions";
 import { ALLOWED_MEDIA_MIME_TYPES, MAX_MEDIA_SIZE_BYTES, MEDIA_AREAS } from "@/lib/media";
+import { sanitizeSvg } from "@/lib/media/sanitizeSvg";
 
 function slugifyFileName(name) {
   const dot = name.lastIndexOf(".");
@@ -20,7 +21,10 @@ function slugifyFileName(name) {
 // Re-encodes uploaded raster images to WebP via sharp (already a project
 // dependency) so the media library stores a modern, compressed format by
 // default, per master plan §11 "Image optimization / WebP where appropriate".
-// SVGs pass through untouched since they're already vector/lossless.
+// SVGs aren't re-encoded (already vector/lossless) but are sanitized
+// (sanitizeSvg) before storage — an SVG opened directly from its public
+// Storage URL executes any embedded script, unlike a raster image or an
+// <img src="...svg"> reference (Phase 8).
 export async function uploadMedia(prevState, formData) {
   const supabase = createClient();
   const perms = await getPermissions(supabase, ["manage_media"]);
@@ -74,6 +78,8 @@ export async function uploadMedia(prevState, formData) {
         errors.push(`${file.name}: could not read image data.`);
         continue;
       }
+    } else {
+      outBuffer = Buffer.from(sanitizeSvg(buffer.toString("utf-8")), "utf-8");
     }
 
     const storagePath = `${area}/${crypto.randomUUID()}.${outExt}`;

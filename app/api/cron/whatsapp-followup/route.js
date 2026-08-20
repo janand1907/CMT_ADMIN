@@ -1,8 +1,23 @@
+import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import { sendCampaignRecipients } from "@/lib/whatsapp/campaigns";
+import { logServerError } from "@/lib/logging/logServerError";
 
 export const dynamic = "force-dynamic";
+
+// Same timing-safe comparison as the WhatsApp webhook's signature check
+// (app/api/webhooks/whatsapp/route.js) — a plain !== leaks how many leading
+// bytes matched via response-time differences; low practical risk over HTTPS
+// for a bearer token, but there's no reason for this route to be the one
+// inconsistent comparison in the codebase.
+function isValidCronSecret(provided, expected) {
+  if (!expected || !provided) return false;
+  const expectedBuf = Buffer.from(expected);
+  const providedBuf = Buffer.from(provided);
+  if (expectedBuf.length !== providedBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, providedBuf);
+}
 
 // Hostinger Cron hits this route on a fixed schedule (see the crontab line documented
 // on /admin/settings/whatsapp — every 15 minutes) rather than at the exact
@@ -62,6 +77,7 @@ async function runSlot(supabase, slot) {
   if (error) {
     // eslint-disable-next-line no-console
     console.error(`[cron:whatsapp-followup] get_eligible_followup_leads(${slot}) failed:`, error.message);
+    await logServerError("cron", error, { stage: "get_eligible_followup_leads", slot });
     return { slot, attempted: 0, sent: 0, failed: 0, error: error.message };
   }
 
@@ -124,6 +140,7 @@ async function runScheduledCampaigns(supabase) {
   if (error) {
     // eslint-disable-next-line no-console
     console.error("[cron:whatsapp-followup] scheduled campaign lookup failed:", error.message);
+    await logServerError("cron", error, { stage: "scheduled_campaign_lookup" });
     return [];
   }
 
@@ -137,7 +154,8 @@ async function runScheduledCampaigns(supabase) {
 
 export async function GET(request) {
   const authHeader = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const providedSecret = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : null;
+  if (!isValidCronSecret(providedSecret, process.env.CRON_SECRET)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

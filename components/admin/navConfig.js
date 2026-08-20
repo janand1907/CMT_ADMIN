@@ -119,6 +119,11 @@ export const NAV_SECTIONS = [
         label: "WhatsApp Settings",
         permission: "manage_whatsapp_automation",
       },
+      {
+        href: "/admin/settings/error-logs",
+        label: "Error Logs",
+        permission: "view_audit_logs",
+      },
     ],
   },
 ];

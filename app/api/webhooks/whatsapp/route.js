@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp/provider";
+import { logServerError } from "@/lib/logging/logServerError";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ async function handleStatus(supabase, status) {
   if (error) {
     // eslint-disable-next-line no-console
     console.error("[webhook:whatsapp] status update failed:", error.message);
+    await logServerError("webhook", error, { stage: "status_update", providerMessageId: status.id });
   }
 }
 
@@ -108,6 +110,7 @@ async function handleInboundMessage(supabase, message) {
     } else {
       // eslint-disable-next-line no-console
       console.error("[webhook:whatsapp] inbound message insert failed:", insertError.message);
+      await logServerError("webhook", insertError, { stage: "inbound_insert", providerMessageId: message.id });
     }
     return;
   }
