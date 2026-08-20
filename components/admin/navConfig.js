@@ -115,6 +115,16 @@ export const NAV_SECTIONS = [
     icon: "settings",
     items: [
       {
+        href: "/admin/settings/users",
+        label: "Users",
+        permission: "manage_users",
+      },
+      {
+        href: "/admin/settings/roles",
+        label: "Roles & Permissions",
+        permission: "manage_roles_permissions",
+      },
+      {
         href: "/admin/settings/whatsapp",
         label: "WhatsApp Settings",
         permission: "manage_whatsapp_automation",
