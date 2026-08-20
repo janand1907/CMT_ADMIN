@@ -1,10 +1,17 @@
+// icon is a string key, not a component reference: NAV_SECTIONS flows from
+// AdminNav.jsx (Server Component) into AdminShell.jsx (Client Component) as
+// a prop, and a raw function can't cross that boundary — "Functions cannot
+// be passed directly to Client Components." AdminShell resolves the key to
+// an actual icon component itself, client-side, via NAV_ICON_MAP below.
 export const NAV_SECTIONS = [
   {
     label: "Overview",
+    icon: "home",
     items: [{ href: "/admin/dashboard", label: "Dashboard", permission: null }],
   },
   {
     label: "CRM",
+    icon: "users",
     items: [
       { href: "/admin/crm/leads", label: "Leads", permission: ["view_leads_own", "view_leads_all"] },
       {
@@ -26,6 +33,7 @@ export const NAV_SECTIONS = [
   },
   {
     label: "Inventory",
+    icon: "package",
     items: [
       {
         href: "/admin/inventory/destinations",
@@ -51,6 +59,7 @@ export const NAV_SECTIONS = [
   },
   {
     label: "CMS",
+    icon: "document",
     items: [
       { href: "/admin/cms/pages", label: "Pages", permission: ["manage_pages", "publish_pages"] },
       { href: "/admin/cms/blog", label: "Blog", permission: ["manage_blog", "publish_blog"] },
@@ -63,6 +72,7 @@ export const NAV_SECTIONS = [
   },
   {
     label: "Marketing",
+    icon: "megaphone",
     items: [
       {
         href: "/admin/marketing/automation",
@@ -88,6 +98,7 @@ export const NAV_SECTIONS = [
   },
   {
     label: "Reports",
+    icon: "chart",
     items: [
       { href: "/admin/reports/leads", label: "Lead Reports", permission: "view_reports" },
       { href: "/admin/reports/sales", label: "Sales Reports", permission: "view_reports" },
@@ -96,10 +107,12 @@ export const NAV_SECTIONS = [
   },
   {
     label: "Account",
+    icon: "user",
     items: [{ href: "/admin/security", label: "Security", permission: null }],
   },
   {
     label: "Settings",
+    icon: "settings",
     items: [
       {
         href: "/admin/settings/whatsapp",

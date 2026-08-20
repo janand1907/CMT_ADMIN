@@ -253,3 +253,51 @@ export function StarIcon({ className }) {
     </svg>
   );
 }
+
+// Added for the admin icon-rail navigation (Phase 7.1) — same 24x24 stroke
+// vocabulary as everything above, no icon library added for eight glyphs.
+export function HomeIcon({ className }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 11l8-7 8 7" />
+      <path d="M6 9.5V20h12V9.5" />
+      <path d="M10 20v-6h4v6" />
+    </svg>
+  );
+}
+
+export function DocumentIcon({ className }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M6 3.5h8l4 4V20a1 1 0 01-1 1H6a1 1 0 01-1-1V4.5a1 1 0 011-1z" />
+      <path d="M14 3.5V8h4M8 12h8M8 16h8" />
+    </svg>
+  );
+}
+
+export function MegaphoneIcon({ className }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M3 10v4a1 1 0 001 1h2l9 4V5l-9 4H4a1 1 0 00-1 1z" />
+      <path d="M9 15v3a2 2 0 01-4 0v-3" />
+      <path d="M19 9.5a3 3 0 010 5" />
+    </svg>
+  );
+}
+
+export function ChartBarIcon({ className }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 20V10M10 20V4M16 20v-7M4 20h16" />
+    </svg>
+  );
+}
+
+export function SettingsIcon({ className }) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v2.2M12 18.8V21M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M3 12h2.2M18.8 12H21M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" />
+    </svg>
+  );
+}
