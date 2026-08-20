@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { HomeIcon, UsersIcon, PackageIcon, DocumentIcon, MegaphoneIcon, ChartBarIcon, UserIcon, SettingsIcon } from "@/components/icons";
+import { ProfileMenu } from "@/components/admin/ProfileMenu";
 
 // navConfig.js stores a string key (not a component) since sections cross
 // the server->client prop boundary in AdminNav.jsx — resolved here instead.
@@ -29,45 +30,41 @@ function sectionIsActive(pathname, section) {
 }
 
 // ---------------------------------------------------------------------------
-// Desktop: narrow icon rail (default state) + a hover-revealed flyout panel
-// per group. The flyout is a DOM descendant of the same wrapper the rail
-// icons live in (positioned absolutely, but still nested inside it) — moving
-// the mouse from an icon into the panel never leaves that wrapper, so
-// onMouseLeave only fires once the pointer truly leaves the combined region.
-// That's what avoids the classic "gap between rail and panel" flicker bug,
-// without a setTimeout/debounce hack.
+// Desktop: two independent layers.
+//   Layer A — narrow icon rail. Hovering the rail expands the WHOLE rail
+//   into an overlay showing icon+label for every group at once (matching
+//   the Supabase-screenshot reference) — position:absolute, so it never
+//   affects the permanent submenu/content's layout, and never changes what
+//   the permanent submenu shows.
+//   Layer B — permanent submenu column, always visible, whose content is
+//   driven by `selectedLabel` (synced to the current route, and updated only
+//   by clicking a rail icon) — never by hover.
 // ---------------------------------------------------------------------------
 
-function RailIcon({ section, isActive, isOpen, onOpen }) {
+function RailRow({ section, isSelected, onSelect, showLabel }) {
   const Icon = NAV_ICON_MAP[section.icon];
   return (
     <button
       type="button"
-      onMouseEnter={onOpen}
-      onFocus={onOpen}
-      onClick={onOpen}
+      onClick={onSelect}
       aria-label={section.label}
-      aria-expanded={isOpen}
-      className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${
-        isActive
-          ? "bg-primary-50 text-primary-700"
-          : isOpen
-            ? "bg-gray-100 text-gray-600"
-            : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-      }`}
+      aria-current={isSelected ? "true" : undefined}
+      className={`flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition ${
+        showLabel ? "mx-2 px-2.5" : "mx-2 h-10 w-10 justify-center"
+      } ${isSelected ? "bg-primary-50 text-primary-700" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"}`}
     >
-      {Icon && <Icon className="h-5 w-5" />}
+      {Icon && <Icon className="h-5 w-5 shrink-0" />}
+      {showLabel && <span className="whitespace-nowrap">{section.label}</span>}
     </button>
   );
 }
 
-function FlyoutItemLink({ item, onNavigate }) {
+function SubmenuLink({ item }) {
   const pathname = usePathname();
   const active = isItemActive(pathname, item.href);
   return (
     <Link
       href={item.href}
-      onClick={onNavigate}
       className={`block rounded-md border-l-2 px-2.5 py-1.5 text-sm font-medium transition ${
         active
           ? "border-primary-600 bg-primary-50 text-primary-700"
@@ -79,69 +76,79 @@ function FlyoutItemLink({ item, onNavigate }) {
   );
 }
 
-function FlyoutPanel({ section, userEmail, userRole, logoutAction, onNavigate }) {
-  const isAccount = section.label === "Account";
+function PermanentSubmenu({ section }) {
+  if (!section) return null;
   return (
-    <div className="absolute left-14 top-0 z-20 flex h-full w-56 flex-col border-r border-gray-200 bg-white py-3 shadow-card">
-      <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>
-      <div className="space-y-0.5 px-2">
+    <div className="hidden w-56 shrink-0 border-r border-gray-200 bg-white py-4 lg:block">
+      <p className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>
+      <nav className="space-y-0.5 px-3">
         {section.items.map((item) => (
-          <FlyoutItemLink key={item.href} item={item} onNavigate={onNavigate} />
+          <SubmenuLink key={item.href} item={item} />
         ))}
-      </div>
-      {isAccount && (
-        <div className="mt-auto border-t border-gray-100 px-3 pt-3">
-          <p className="truncate text-xs font-medium text-gray-700">{userEmail}</p>
-          <p className="text-xs text-gray-400">{userRole}</p>
-          <form action={logoutAction} className="mt-2">
-            <button type="submit" className="text-xs font-medium text-gray-500 hover:text-primary-600">
-              Sign out
-            </button>
-          </form>
-        </div>
-      )}
+      </nav>
     </div>
   );
 }
 
-function DesktopNav({ sections, userEmail, userRole, logoutAction }) {
-  const pathname = usePathname();
-  const [openLabel, setOpenLabel] = useState(null);
-  const openSection = sections.find((s) => s.label === openLabel) || null;
+function DesktopNav({ sections, selectedLabel, onSelect }) {
+  const [railHover, setRailHover] = useState(false);
+  const selectedSection = sections.find((s) => s.label === selectedLabel) || null;
+
+  function selectAndCollapse(label) {
+    onSelect(label);
+    setRailHover(false);
+  }
 
   return (
-    <div className="relative hidden lg:flex" onMouseLeave={() => setOpenLabel(null)}>
-      <div className="flex w-14 flex-col items-center gap-1 border-r border-gray-200 bg-white py-3">
-        <Link href="/admin/dashboard" className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg">
-          <Image src="/favicon.png" alt="Connect My Tours" width={28} height={28} priority className="h-7 w-7 rounded" />
-        </Link>
-        {sections.map((section) => (
-          <RailIcon
-            key={section.label}
-            section={section}
-            isActive={sectionIsActive(pathname, section)}
-            isOpen={openLabel === section.label}
-            onOpen={() => setOpenLabel(section.label)}
-          />
-        ))}
+    <div className="hidden lg:flex">
+      {/* Wrapper is the single hover region for both the always-present
+          collapsed rail and the overlay — moving the pointer from a
+          collapsed icon into the expanded overlay never leaves this
+          element's subtree, so it never triggers a premature collapse. */}
+      <div className="relative" onMouseEnter={() => setRailHover(true)} onMouseLeave={() => setRailHover(false)}>
+        {/* Hidden from accessibility/interaction while the overlay covers it —
+            otherwise two same-labelled "CMS" buttons exist at once (one
+            visually blocked), which is confusing for screen readers and
+            makes role-based queries ambiguous. */}
+        <div
+          className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-gray-200 bg-white py-3"
+          aria-hidden={railHover || undefined}
+          inert={railHover ? "" : undefined}
+        >
+          {sections.map((section) => (
+            <RailRow
+              key={section.label}
+              section={section}
+              isSelected={selectedLabel === section.label}
+              onSelect={() => selectAndCollapse(section.label)}
+              showLabel={false}
+            />
+          ))}
+        </div>
+
+        {railHover && (
+          <div className="absolute left-0 top-0 z-30 flex w-52 flex-col gap-1 border-r border-gray-200 bg-white py-3 shadow-card">
+            {sections.map((section) => (
+              <RailRow
+                key={section.label}
+                section={section}
+                isSelected={selectedLabel === section.label}
+                onSelect={() => selectAndCollapse(section.label)}
+                showLabel
+              />
+            ))}
+          </div>
+        )}
       </div>
-      {openSection && (
-        <FlyoutPanel
-          section={openSection}
-          userEmail={userEmail}
-          userRole={userRole}
-          logoutAction={logoutAction}
-          onNavigate={() => setOpenLabel(null)}
-        />
-      )}
+      <PermanentSubmenu section={selectedSection} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Mobile: unchanged tap-based drawer with full labeled sections — hover has
-// no equivalent on touch, so this keeps its own, separate, already-working
-// interaction model rather than reusing the desktop rail.
+// Mobile: unchanged tap-based drawer with full labeled sections — nav only,
+// no account block (that lives in the header's ProfileMenu now, same as
+// desktop, so sign-out has exactly one location regardless of viewport).
 // ---------------------------------------------------------------------------
 
 function MobileNavLink({ href, label, onNavigate }) {
@@ -179,11 +186,33 @@ function MobileSidebarContent({ sections, onNavigate }) {
   );
 }
 
-function BrandLink({ onClick }) {
+// ---------------------------------------------------------------------------
+// Header: full-width, above the nav/content row. Logo left (+ mobile
+// hamburger), profile avatar/dropdown right — account/logout lives here now,
+// not at the sidebar bottom, so the sidebar is navigation-only per the
+// explicit instruction.
+// ---------------------------------------------------------------------------
+
+function Header({ onMobileMenuClick, userEmail, userRole, userName, logoutAction }) {
   return (
-    <Link href="/admin/dashboard" onClick={onClick} className="flex items-center">
-      <Image src="/logo.svg" alt="Connect My Tours" width={140} height={49} priority className="h-8 w-auto" />
-    </Link>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 lg:px-6">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onMobileMenuClick}
+          aria-label="Open menu"
+          className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 lg:hidden"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </button>
+        <Link href="/admin/dashboard" className="flex items-center">
+          <Image src="/logo.svg" alt="Connect My Tours" width={140} height={49} priority className="h-8 w-auto" />
+        </Link>
+      </div>
+      <ProfileMenu userEmail={userEmail} userRole={userRole} userName={userName} logoutAction={logoutAction} />
+    </header>
   );
 }
 
@@ -210,9 +239,21 @@ function useAuthStateRedirect() {
   }, []);
 }
 
-export function AdminShell({ sections, userEmail, userRole, logoutAction, children }) {
+export function AdminShell({ sections, userEmail, userRole, userName, logoutAction, children }) {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState(
+    () => sections.find((s) => sectionIsActive(pathname, s))?.label ?? sections[0]?.label
+  );
   useAuthStateRedirect();
+
+  // Current route is the source of truth for which group's permanent
+  // submenu is shown (refresh, back/forward, direct URL) — hover never
+  // touches this state, only this effect and a rail click do.
+  useEffect(() => {
+    const active = sections.find((s) => sectionIsActive(pathname, s));
+    if (active) setSelectedLabel(active.label);
+  }, [pathname, sections]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -224,47 +265,37 @@ export function AdminShell({ sections, userEmail, userRole, logoutAction, childr
   }, [mobileOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50 lg:flex">
-      <DesktopNav sections={sections} userEmail={userEmail} userRole={userRole} logoutAction={logoutAction} />
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <Header
+        onMobileMenuClick={() => setMobileOpen(true)}
+        userEmail={userEmail}
+        userRole={userRole}
+        userName={userName}
+        logoutAction={logoutAction}
+      />
 
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-gray-900/50" onClick={() => setMobileOpen(false)} />
-          <div className="relative flex h-full w-64 flex-col bg-white shadow-modal">
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-              <BrandLink onClick={() => setMobileOpen(false)} />
-              <button onClick={() => setMobileOpen(false)} className="rounded-md p-1 text-gray-400 hover:bg-gray-100">
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-3 py-3">
-              <MobileSidebarContent sections={sections} onNavigate={() => setMobileOpen(false)} />
-            </div>
-            <div className="border-t border-gray-100 p-3">
-              <p className="truncate text-xs font-medium text-gray-700">{userEmail}</p>
-              <p className="text-xs text-gray-400">{userRole}</p>
-              <form action={logoutAction} className="mt-2">
-                <button type="submit" className="text-xs font-medium text-gray-500 hover:text-primary-600">
-                  Sign out
+      <div className="flex flex-1">
+        <DesktopNav sections={sections} selectedLabel={selectedLabel} onSelect={setSelectedLabel} />
+
+        {mobileOpen && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <div className="fixed inset-0 bg-gray-900/50" onClick={() => setMobileOpen(false)} />
+            <div className="relative flex h-full w-64 flex-col bg-white shadow-modal">
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                <Image src="/logo.svg" alt="Connect My Tours" width={140} height={49} className="h-8 w-auto" />
+                <button onClick={() => setMobileOpen(false)} className="rounded-md p-1 text-gray-400 hover:bg-gray-100">
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
                 </button>
-              </form>
+              </div>
+              <div className="flex-1 overflow-y-auto px-3 py-3">
+                <MobileSidebarContent sections={sections} onNavigate={() => setMobileOpen(false)} />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="flex min-h-screen flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
-          <button onClick={() => setMobileOpen(true)} className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100">
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </button>
-          <BrandLink />
-          <div className="w-8" />
-        </header>
         <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10">
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>

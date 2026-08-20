@@ -23,6 +23,7 @@ export default async function AdminNav({ children }) {
       sections={sections}
       userEmail={profile?.email ?? user.email}
       userRole={profile?.roles?.name ?? "Not yet assigned"}
+      userName={profile?.full_name}
       logoutAction={logout}
     >
       {children}

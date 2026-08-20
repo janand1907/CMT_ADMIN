@@ -1,22 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getPermissions } from "@/lib/auth/getPermissions";
 import { getLeadReports } from "@/lib/reports/queries";
+import { LEAD_STATUS_LABELS } from "@/lib/reports/constants";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { ErrorState } from "@/components/admin/ui/EmptyState";
 import { BreakdownTable } from "@/components/admin/reports/BreakdownTable";
-
-const STATUS_LABELS = {
-  new: "New",
-  contacted: "Contacted",
-  quotation_prepared: "Quotation Prepared",
-  quotation_sent: "Quotation Sent",
-  follow_up: "Follow-up",
-  negotiation: "Negotiation",
-  confirmed: "Confirmed",
-  not_interested: "Not Interested",
-  lost: "Lost",
-  cancelled: "Cancelled",
-};
 
 export default async function LeadReportsPage() {
   const supabase = createClient();
@@ -42,7 +30,7 @@ export default async function LeadReportsPage() {
     );
   }
 
-  const statusWise = data.statusWise.map((row) => ({ ...row, label: STATUS_LABELS[row.label] || row.label }));
+  const statusWise = data.statusWise.map((row) => ({ ...row, label: LEAD_STATUS_LABELS[row.label] || row.label }));
 
   return (
     <div>
