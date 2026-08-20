@@ -1643,6 +1643,119 @@ carried all along, and keeps "do not push unfinished work to production" intact.
 
 ---
 
+## Phase 8.1 — User Management + Roles & Permissions
+
+**Purpose:** Phase 0 built the full authorization architecture (`public.users`, `roles`,
+`permissions`, `role_permissions`, `has_permission()`, RLS on all four) but never built an
+in-app screen for using it — creating a staff account or changing a role could only be done by
+hand-editing the database. This is the exact "Users & Roles ... missing Settings sub-page" gap
+Phase 8 flagged and deliberately left open. Phase 8.1 fills it, strictly on top of the existing
+architecture — no new tables, no new permission keys, no bypass of Supabase Auth.
+
+**Audit before implementation:** Every migration was read to reconstruct, verbatim, the real
+current state rather than assume it: exactly 4 roles exist (`Super Admin`, `Admin / Manager`,
+`Sales Staff`, `Content Manager` — no "Content Writer" role exists anywhere; `Content Manager` is
+the existing equivalent, so no duplicate role was created), 41 permission keys exist across all
+phases, and `manage_users`/`manage_roles_permissions` were both already seeded in Phase 0 but
+**only ever granted to Super Admin** — Admin / Manager holds neither. That boundary was kept
+exactly as-is (a deliberate, conservative default, not an oversight) rather than widened. No
+existing code path anywhere created an `auth.users` row or assigned a `role_id` before this phase
+— confirmed by a full-repo grep.
+
+**Implementation:**
+- **`/admin/settings/users`** — list (search by name/email, filter by Role/Status, paginated),
+  **Add User** (Full Name/Email/Role/Active — no password ever passes through this app; creation
+  goes through `supabase.auth.admin.inviteUserByEmail()` via the existing service-role helper,
+  `lib/supabase/admin.js`'s `createAdminClient()`, reusing forgot-password's exact existing PKCE
+  callback → reset-password flow for the invited person to set their own password), and a
+  detail/edit page (Name/Phone/Role editable; Email read-only after creation — changing it would
+  desync `auth.users.email` from `public.users.email`, out of scope). **Activate/Deactivate** is
+  a dedicated action, not a field edit: deactivating sets `active = false` (which
+  `has_permission()` already treats as "no permissions, immediately," per its existing
+  definition) and additionally calls the service-role client's `auth.admin.signOut(userId,
+  "global")` to revoke their refresh token too, mirroring `/admin/security`'s existing "Sign out
+  other sessions" pattern.
+- **`/admin/settings/roles`** — a **Manage by Role** view (checkbox grid per role, grouped by
+  module, generated live from the real `permissions` table — nothing hardcoded) and a read-only
+  **Permission Matrix** view. Writes go through the normal authenticated client, since RLS
+  already permits this for a `manage_roles_permissions` holder — no service-role client needed
+  here. **Super Admin's row is rendered read-only** (no checkboxes) — a deliberate safeguard,
+  since the `auto_grant_super_admin` trigger only re-grants on *new* permission inserts and has
+  no protection against an existing grant being manually deleted.
+- **Self-lockout prevention** (`lib/auth/superAdminGuard.js`): before a role change away from
+  Super Admin or a deactivation, counts other *active* Super Admins; blocks with a clear
+  on-screen error if the count would hit zero. Applies to self-directed and other-directed
+  changes alike.
+- **Audit logging** (`lib/audit/logAdminEvent.js`, new shared helper): `user_created`,
+  `user_updated`, `user_role_changed`, `user_activated`, `user_deactivated`,
+  `role_permissions_updated` — written via the normal authenticated client (the actor always has
+  a real session here, unlike login/logout's admin-client path, so `audit_logs_insert_self`
+  already covers it).
+- **No hard delete** — deactivate is the only destructive-ish action; `public.users.id` is
+  referenced by leads/quotations/bookings/audit_logs and this phase didn't audit every one of
+  those tables' `ON DELETE` behavior, so hard delete was deliberately not built.
+- **Navigation**: two new items added to `navConfig.js`'s existing `Settings` section (`Users`,
+  `Roles & Permissions`) — no other nav/rail/submenu mechanics touched.
+
+**Verification:**
+- `npm run lint`, `npm run build` — both clean (dev server stopped first); all four new routes
+  compile and appear in the route manifest. No database migration was needed — Phase 0's
+  existing RLS already covers every new write.
+- Throwaway accounts only (Super Admin ×1, Sales Staff ×1, a UI-flow target user ×1), created via
+  the same service-role pattern used all session; all three deleted and cleanup confirmed via a
+  direct `SELECT` returning zero rows.
+- Full edit/role-change/deactivate/activate cycle exercised through the real UI against a
+  throwaway target account, each step cross-checked directly against the database: name and role
+  changes persisted correctly, the correct `user_updated` and `user_role_changed` audit rows were
+  written (previous/new role id), deactivate flipped `active` to `false` and wrote
+  `user_deactivated`, reactivate flipped it back and wrote `user_activated`, and the confirmation
+  dialog's exact wording was captured and matches the "isSelf" vs. "other account" branches.
+- Roles & Permissions: confirmed Super Admin renders with zero checkboxes and the "not editable"
+  message; toggled `view_reports` on for Sales Staff through the real UI, confirmed the
+  `role_permissions` row and a `role_permissions_updated` audit row (`added: ["view_reports"]`)
+  existed in the database, then reverted it through the same UI and re-confirmed the database
+  matched the original baseline exactly — no permanent change was left behind.
+- Sales Staff denial, tested both ways per the Regression Rule (not just hidden nav): the entire
+  Settings nav group is correctly absent for a Sales Staff account (all four Settings items are
+  permission-gated and it holds none of them), and direct URL access to both
+  `/admin/settings/users` and `/admin/settings/roles` correctly renders "Access denied" server-
+  side.
+- A real Supabase Auth constraint surfaced during testing, not a code bug: the project's
+  email-sending rate limit (`over_email_send_rate_limit`, a low hourly cap on the built-in email
+  service) was hit while testing, since it's shared with every `resetPasswordForEmail`/invite
+  call made earlier this session. The trigger → profile-completion → role-assignment mechanics
+  the `createUser` Server Action depends on were separately verified correct and working via a
+  non-email-sending equivalent call (`auth.admin.createUser`), and the error-handling was
+  improved to surface this specific case with a clear message ("Too many invitation emails have
+  been sent recently...") instead of a generic one — confirmed live in the UI. The actual
+  `inviteUserByEmail` HTTP call itself could not be exercised a second time within this session
+  due to the live quota; it is Supabase's own already-proven primitive (the same one
+  forgot-password already relies on), not new code this phase wrote.
+- Self-lockout blocking (the exact "last remaining Super Admin" case) was verified by code review
+  rather than a live test — the real Super Admin count in this environment is 2 (one production
+  account plus the throwaway used for this testing), and deliberately reducing that to zero to
+  observe the block would have meant manipulating the real production Super Admin population,
+  which this pass chose not to risk. The "not blocked, since another Super Admin exists" path
+  *was* exercised live (the throwaway target account's role/status changes all succeeded
+  normally). Stated plainly as a verification boundary, not glossed over.
+
+**Bugs found and fixed during this phase:** One — the `over_email_send_rate_limit` error case
+above was originally mapped to a generic "Could not create the user account" message; fixed to
+surface the real, actionable cause.
+
+**Documentation:** `public/admin-user-guide.html` updated (not rewritten) — two new feature
+sections (Users, Roles & Permissions) added under the existing Settings TOC group in nav order,
+and the existing "Roles & Permissions" reference section's now-stale claim ("no self-service
+screen exists") corrected to point at the new pages. TOC/anchor integrity re-verified (42
+sections, 42 TOC links, zero broken anchors).
+
+**Current status: COMPLETE.** User Management and Roles & Permissions are both implemented,
+permission-gated (Super Admin only, matching the existing, unwidened `manage_users`/
+`manage_roles_permissions` grants), audited, and verified against real data — with the one
+verification boundary above (last-Super-Admin blocking) stated explicitly rather than claimed.
+
+---
+
 ## Current Phase Order
 
 Phase 0 (CLOSED) → Phase 1 (CLOSED) → Phase 2 (CLOSED) → Phase 3 (CLOSED) →
@@ -1651,7 +1764,8 @@ Phase 6 (CLOSED — Packages/Destinations permanently excluded, see Phase 6 sect
 Phase 7 (CLOSED — Booking/Conversion/Package/Destination/Staff reports excluded, see Phase 7
 section) → Phase 7.1 (COMPLETE — admin UX/branding/auto-logout, see Phase 7.1 section) →
 Phase 8 (IMPLEMENTATION COMPLETE, hardening scope — NOT CLOSED, deployment not started, see
-Phase 8 section)
+Phase 8 section) → Phase 8.1 (COMPLETE — user management + roles & permissions, see Phase 8.1
+section)
 
 ## Current Next Action
 
@@ -1756,3 +1870,23 @@ assumed.
 Commits: `2826a7e` (feat: implement phase 8 production hardening), plus this closure
 documentation update. Nothing pushed to any remote; production (`https://connectmytours.com`)
 untouched.
+
+Phase 8.1 — User Management + Roles & Permissions — is now **COMPLETE**. Closes the "Users &
+Roles" gap Phase 8 explicitly flagged and left open: `/admin/settings/users` and
+`/admin/settings/roles`, built strictly on Phase 0's existing authorization architecture — no new
+tables, no new permission keys, no new RLS. Confirmed the only 4 real roles (no "Content Writer"
+role exists; "Content Manager" is the existing equivalent) and that `manage_users`/
+`manage_roles_permissions` remain Super-Admin-only, unwidened. Self-lockout prevention, dedicated
+deactivate/reactivate with session revocation, and full audit logging (`user_created`,
+`user_updated`, `user_role_changed`, `user_activated`, `user_deactivated`,
+`role_permissions_updated`) are all implemented and verified against real data through the
+actual UI, with cleanup confirmed. `npm run lint` and `npm run build` are clean. See the Phase
+8.1 section above for full detail, including the two verification boundaries stated plainly
+rather than glossed over (the project's shared email-send rate limit blocked a second live
+`inviteUserByEmail` call within this session, and the exact "last remaining Super Admin" block
+path was verified by code review rather than a live test, to avoid manipulating the real
+production Super Admin count).
+
+Commits: `d1a815f` (feat: add admin user and role management), plus this closure documentation
+update. Nothing pushed to any remote; production (`https://connectmytours.com`) untouched.
+

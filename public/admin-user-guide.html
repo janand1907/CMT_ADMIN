@@ -264,6 +264,8 @@ footer.doc-footer{
     <div class="toc-group">
       <div class="toc-group-label">Settings</div>
       <ul>
+        <li><a href="#users">Users</a></li>
+        <li><a href="#settings-roles">Roles & Permissions</a></li>
         <li><a href="#whatsapp-settings">WhatsApp Settings</a></li>
         <li><a href="#error-logs">Error Logs</a></li>
       </ul>
@@ -944,6 +946,56 @@ footer.doc-footer{
     </div>
 
     <!-- ============================================================ SETTINGS ============================================================ -->
+    <h2 id="users" class="section-anchor">Users</h2>
+    <p class="breadcrumb"><b>Admin Panel → Settings → Users</b></p>
+
+    <h3>What is it?</h3>
+    <p>The staff account directory — every person who can sign in to this admin panel, their role, and whether their account is active.</p>
+
+    <h3>Why do we use it?</h3>
+    <p>Before this existed, creating a staff account or changing someone's role could only be done by directly editing the database. This page makes that a normal, auditable admin action.</p>
+
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Settings → Users</b>. Requires <code>manage_users</code> — today that means <b>Super Admin only</b>.</p>
+
+    <h3>How to use it</h3>
+    <ol>
+      <li>The list shows every account's Name, Email, Role, Status, and when it was created. Search by name or email, or filter by Role or Status.</li>
+      <li>Click <b>+ Add User</b> to create a new staff account: enter their Full Name, Email, and Role, and click <b>Send Invitation</b>. No password is set by you — an email is sent with a secure link that lets them set their own password, the same mechanism as the sign-in screen's "Forgot password?" flow.</li>
+      <li>Click any user to open their account: edit their Full Name, Phone, or Role from the Profile card, and click <b>Save Changes</b>. Email cannot be changed here once an account exists.</li>
+      <li>Use <b>Deactivate User</b> / <b>Activate User</b> in the Account card to turn access on or off. Deactivating asks for confirmation, immediately blocks that account from every permission-gated page, and signs out any device they're currently using.</li>
+    </ol>
+
+    <div class="callout limit">
+      <b>Accounts are deactivated, never deleted</b>
+      There is no delete option for a user account — it could silently break the history behind leads, quotations, bookings, and audit records that reference it. Deactivate is the only way to remove someone's access, and it's fully reversible.
+    </div>
+
+    <div class="callout note">
+      <b>You can't lock the system out of itself</b>
+      If an account is the only remaining active Super Admin, the system blocks any attempt to change its role away from Super Admin or deactivate it, with a clear on-screen explanation. Assign Super Admin to another account first if you need to do either.
+    </div>
+
+    <h2 id="settings-roles" class="section-anchor">Roles & Permissions</h2>
+    <p class="breadcrumb"><b>Admin Panel → Settings → Roles & Permissions</b></p>
+
+    <h3>What is it?</h3>
+    <p>A screen for understanding, and for three of the four roles, editing exactly what each role is allowed to do.</p>
+
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Settings → Roles & Permissions</b>. Requires <code>manage_roles_permissions</code> — today that means <b>Super Admin only</b>.</p>
+
+    <h3>How to use it</h3>
+    <ul>
+      <li><b>Manage by Role</b> (default view): pick a role on the left, then check or uncheck permissions on the right, grouped by area (Core, CRM, Inventory, Quotations, Bookings, Marketing, CMS, Reports). Click <b>Save Changes</b> to apply.</li>
+      <li><b>Permission Matrix</b>: a read-only, full grid of every role against every permission, for a bird's-eye view.</li>
+    </ul>
+
+    <div class="callout limit">
+      <b>Super Admin isn't editable here</b>
+      Super Admin automatically holds every permission that exists, including ones added in the future — its row is shown for reference only, with no checkboxes. This is a deliberate safeguard: editing it here couldn't be reliably undone by anything in the system.
+    </div>
+
     <h2 id="whatsapp-settings" class="section-anchor">WhatsApp Settings</h2>
     <p class="breadcrumb"><b>Admin Panel → Settings → WhatsApp Settings</b></p>
     <h3>What is it?</h3>
@@ -993,7 +1045,7 @@ footer.doc-footer{
 
     <div class="callout limit">
       <b>Creating accounts and changing roles</b>
-      There is currently no self-service "Manage Users &amp; Roles" screen inside the admin panel itself. If you need a new staff account created, your role changed, or a permission adjusted, contact your system administrator directly rather than looking for it in Settings.
+      Super Admin accounts can create staff accounts, change roles, and adjust role permissions directly — see <a href="#users">Users</a> and <a href="#settings-roles">Roles & Permissions</a> under Settings. If you don't hold Super Admin, you won't see those pages; contact your system administrator for an account or role change.
     </div>
 
     <!-- ============================================================ -->
