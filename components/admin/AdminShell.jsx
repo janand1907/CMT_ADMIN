@@ -31,31 +31,36 @@ function sectionIsActive(pathname, section) {
 
 // ---------------------------------------------------------------------------
 // Desktop: two independent layers.
-//   Layer A — narrow icon rail. Hovering the rail expands the WHOLE rail
-//   into an overlay showing icon+label for every group at once (matching
-//   the Supabase-screenshot reference) — position:absolute, so it never
-//   affects the permanent submenu/content's layout, and never changes what
-//   the permanent submenu shows.
+//   Layer A — the icon rail is ONE persistent element (not a second panel
+//   that mounts on hover). Its own width transitions on :hover, in pure CSS
+//   (Tailwind's hover:/group-hover: variants, no onMouseEnter/Leave state) —
+//   80px collapsed, 128px on hover, revealing the label spans that are
+//   always in the DOM, just clipped by overflow-hidden until it widens. It's
+//   position:absolute inside a fixed-width reserved wrapper, so growing it
+//   never affects the permanent submenu/content's layout.
 //   Layer B — permanent submenu column, always visible, whose content is
-//   driven by `selectedLabel` (synced to the current route, and updated only
-//   by clicking a rail icon) — never by hover.
+//   driven by `selectedLabel` (synced to the current route only) — hover
+//   never touches it.
+//   Clicking a rail row is a real navigation to that group's first item —
+//   the permanent submenu then follows the route change on its own via the
+//   existing pathname-sync effect, no separate "select" handler needed.
 // ---------------------------------------------------------------------------
 
-function RailRow({ section, isSelected, onSelect, showLabel }) {
+function RailRow({ section, isSelected }) {
   const Icon = NAV_ICON_MAP[section.icon];
+  const firstHref = section.items[0]?.href;
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <Link
+      href={firstHref}
       aria-label={section.label}
       aria-current={isSelected ? "true" : undefined}
-      className={`flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition ${
-        showLabel ? "mx-2 px-2.5" : "mx-2 h-10 w-10 justify-center"
-      } ${isSelected ? "bg-primary-50 text-primary-700" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"}`}
+      className={`mx-2 flex items-center gap-3 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
+        isSelected ? "bg-primary-50 text-primary-700" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+      }`}
     >
-      {Icon && <Icon className="h-5 w-5 shrink-0" />}
-      {showLabel && <span className="whitespace-nowrap">{section.label}</span>}
-    </button>
+      <Icon className="h-5 w-5 shrink-0" />
+      <span className="opacity-0 transition-opacity duration-200 group-hover:opacity-100">{section.label}</span>
+    </Link>
   );
 }
 
@@ -90,55 +95,20 @@ function PermanentSubmenu({ section }) {
   );
 }
 
-function DesktopNav({ sections, selectedLabel, onSelect }) {
-  const [railHover, setRailHover] = useState(false);
+function DesktopNav({ sections, selectedLabel }) {
   const selectedSection = sections.find((s) => s.label === selectedLabel) || null;
-
-  function selectAndCollapse(label) {
-    onSelect(label);
-    setRailHover(false);
-  }
 
   return (
     <div className="hidden lg:flex">
-      {/* Wrapper is the single hover region for both the always-present
-          collapsed rail and the overlay — moving the pointer from a
-          collapsed icon into the expanded overlay never leaves this
-          element's subtree, so it never triggers a premature collapse. */}
-      <div className="relative" onMouseEnter={() => setRailHover(true)} onMouseLeave={() => setRailHover(false)}>
-        {/* Hidden from accessibility/interaction while the overlay covers it —
-            otherwise two same-labelled "CMS" buttons exist at once (one
-            visually blocked), which is confusing for screen readers and
-            makes role-based queries ambiguous. */}
-        <div
-          className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-gray-200 bg-white py-3"
-          aria-hidden={railHover || undefined}
-          inert={railHover ? "" : undefined}
-        >
+      {/* Reserves a fixed 80px in the real flex layout — the inner div's
+          hover-expanded width is position:absolute, so it never resizes
+          this wrapper and never pushes the permanent submenu/content. */}
+      <div className="relative w-20 shrink-0">
+        <div className="group absolute inset-y-0 left-0 z-30 flex w-20 flex-col gap-1 overflow-hidden border-r border-gray-200 bg-white py-3 shadow-none transition-all duration-200 ease-out hover:w-32 hover:shadow-card">
           {sections.map((section) => (
-            <RailRow
-              key={section.label}
-              section={section}
-              isSelected={selectedLabel === section.label}
-              onSelect={() => selectAndCollapse(section.label)}
-              showLabel={false}
-            />
+            <RailRow key={section.label} section={section} isSelected={selectedLabel === section.label} />
           ))}
         </div>
-
-        {railHover && (
-          <div className="absolute left-0 top-0 z-30 flex w-52 flex-col gap-1 border-r border-gray-200 bg-white py-3 shadow-card">
-            {sections.map((section) => (
-              <RailRow
-                key={section.label}
-                section={section}
-                isSelected={selectedLabel === section.label}
-                onSelect={() => selectAndCollapse(section.label)}
-                showLabel
-              />
-            ))}
-          </div>
-        )}
       </div>
       <PermanentSubmenu section={selectedSection} />
     </div>
@@ -275,7 +245,7 @@ export function AdminShell({ sections, userEmail, userRole, userName, logoutActi
       />
 
       <div className="flex flex-1">
-        <DesktopNav sections={sections} selectedLabel={selectedLabel} onSelect={setSelectedLabel} />
+        <DesktopNav sections={sections} selectedLabel={selectedLabel} />
 
         {mobileOpen && (
           <div className="fixed inset-0 z-40 lg:hidden">
