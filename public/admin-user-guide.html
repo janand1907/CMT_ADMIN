@@ -253,6 +253,7 @@ footer.doc-footer{
         <li><a href="#lead-reports">Lead Reports</a></li>
         <li><a href="#sales-reports">Sales Reports</a></li>
         <li><a href="#marketing-reports">Marketing Reports</a></li>
+        <li><a href="#contact-clicks">Contact Clicks</a></li>
       </ul>
     </div>
 
@@ -340,7 +341,7 @@ footer.doc-footer{
     <p>Every screen behind login shares the same shell: a header across the top, a navigation rail on the left, and the page content in the middle.</p>
     <h3>How to use it</h3>
     <ul>
-      <li><b>Header</b> — the ConnectMyTours logo (click it to return to the Dashboard from anywhere), the <b>How to Use</b> link that opens this guide, and your account avatar on the far right.</li>
+      <li><b>Header</b> — the ConnectMyTours logo (click it to return to the Dashboard from anywhere), the <b>How to Use</b> link that opens this guide, a <b>Go to Website</b> link that opens the public ConnectMyTours site in a new tab (the Admin Panel stays open), and your account avatar on the far right.</li>
       <li><b>Navigation rail</b> — a narrow strip of icons on the left, one per section (Overview, CRM, Inventory, CMS, Marketing, Reports, Account, Settings). Hover over it and it widens briefly to show each section's label. Click any icon to jump straight to that section's first page.</li>
       <li><b>Permanent submenu</b> — next to the rail, the list of pages inside whichever section you're currently in (for example, inside CRM you'll see Leads, Quotations, Bookings, and so on). This updates automatically as you navigate.</li>
       <li><b>On mobile/tablet</b>, the rail and submenu collapse into a single ☰ menu button in the header.</li>
@@ -926,6 +927,20 @@ footer.doc-footer{
     <p>Nav rail → <b>Reports → Marketing Reports</b>. Requires <code>view_reports</code>.</p>
     <div class="callout limit">These numbers reflect real send attempts recorded in <a href="#whatsapp-messages">WhatsApp Messages</a> — see the note there about the current lack of configured WhatsApp credentials.</div>
 
+    <h2 id="contact-clicks" class="section-anchor">Contact Clicks</h2>
+    <p class="breadcrumb"><b>Admin Panel → Reports → Contact Clicks</b></p>
+    <h3>What is it?</h3>
+    <p>A log of every Call and WhatsApp button click on the public website — from the mobile sticky bar and every other Call/WhatsApp button on the site (Footer, package pages, city pages) — for lead attribution: which page actually drove the contact.</p>
+    <h3>How to access it</h3>
+    <p>Nav rail → <b>Reports → Contact Clicks</b>. Requires <code>view_reports</code> — the same permission as the other Reports pages.</p>
+    <h3>How to use it</h3>
+    <ul>
+      <li>Summary cards at the top show Total Calls, Total WhatsApp Clicks, Total Contact Clicks, and today's count.</li>
+      <li>Filter by <b>Action</b> (Call/WhatsApp), <b>Device</b> (Mobile/Tablet/Desktop), and <b>Date range</b> (Today/Yesterday/Last 7 days/Last 30 days).</li>
+      <li>The table lists newest first: action, the public page the click happened on, an approximate location (city/region — never an exact address or GPS coordinate), device, browser/OS, and time.</li>
+    </ul>
+    <div class="callout note">Privacy: only coarse location (country/region/city, derived server-side from a best-effort IP lookup) is recorded — the visitor's exact location, browser history, or any other personal data is never collected, and the raw IP address itself is never stored. If a click can't be geolocated, the location column simply reads "Unknown". Tracking a click never delays or blocks the Call/WhatsApp action itself.</div>
+
     <!-- ============================================================ ACCOUNT ============================================================ -->
     <h2 id="security" class="section-anchor">Security</h2>
     <p class="breadcrumb"><b>Admin Panel → Account → Security</b></p>
@@ -940,6 +955,7 @@ footer.doc-footer{
       <li><b>Recent sign-in activity</b> lists your last 20 sign-in attempts (success or failed) with time, IP, and browser/OS, so you can spot anything you don't recognise.</li>
     </ul>
     <div class="callout note">Changing your password itself is done from the profile menu's <b>Change Password</b> link, not from this page.</div>
+    <div class="callout note">Every admin session also signs out automatically after <b>30 minutes with no activity</b> (mouse movement, clicks, keyboard input, scrolling, or navigation all count as activity). At 25 minutes of inactivity you'll see a warning with <b>Stay Signed In</b> and <b>Sign Out</b> options; if you don't respond, you're signed out and redirected to the login page at the 30-minute mark. This is separate from — and in addition to — being signed out immediately if your session is revoked elsewhere (for example, via "Sign out other sessions" above).</div>
     <div class="card">
       <img src="admin-user-guide-assets/profile-menu.png" alt="Profile menu open, showing account details and Sign out" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'shot-missing',textContent:'Screenshot not available: profile-menu.png'}))">
       <p class="shot-caption">The profile menu, opened from the header avatar.</p>

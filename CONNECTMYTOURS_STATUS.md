@@ -2008,3 +2008,97 @@ complete. **Phase 8 therefore remains NOT CLOSED** — implementation and both o
 verification items are done, but the actual production deployment is not, and closing it while
 that's true would misrepresent the real state.
 
+---
+
+## Post-Phase 8 Fixes & Enhancements (this update, 2026-08-21)
+
+Six independently-requested fixes/enhancements on top of the Phase 8/8.1 baseline. Not a new
+numbered phase — scope was given directly, not transcribed from the master plan. Implementation
+is **complete and verified against real data**; production deployment/push is not part of this
+pass (see Phase 8's own closure note above — the same push/deploy gap still applies).
+
+1. **Admin inactivity logout.** `components/admin/useInactivityLogout.js` (new) tracks the
+   admin's last activity via throttled `mousemove`/`mousedown`/`keydown`/`scroll`/`touchstart`
+   listeners (max one timer reschedule per 5s, not per event), shows a warning at 25 minutes
+   (`components/admin/InactivityWarningModal.jsx`, built on the existing `Dialog`/`Button` UI
+   components) and signs out at 30 minutes by calling the real `logout` Server Action from
+   `app/admin/login/actions.js` directly (not via a form submit) — the same audit-logged
+   (`recordLogoutEvent`) path manual sign-out already uses. Wired into `AdminShell.jsx` alongside
+   the existing `useAuthStateRedirect()` session-invalidation listener, which is untouched — both
+   run independently.
+2. **"Go to Website" header link.** Added next to the existing "How to Use" link in
+   `AdminShell.jsx`'s `Header`, using `siteConfig.domain`
+   (`https://www.connectmytours.com`, `config/site.js` — the repo's only canonical public-domain
+   value; no env var exists for this). `target="_blank" rel="noopener noreferrer"`.
+3. **Public header-overlap fix.** Root cause: `Navbar.jsx`'s header is `fixed` with a flat `h-16`
+   (64px) at every breakpoint, and no public page besides the Homepage (whose full-bleed hero is
+   designed to sit under it) compensated for that. Fixed once, in the shared wrapper
+   `components/layout/SiteChrome.jsx` — `pt-16` on `<main>` for every route except `/`. No
+   per-page changes.
+4. **Srivani VIP Darshan banner (Chennai + Hyderabad).** Root cause confirmed by inspection, not
+   guessed: `PackageHeroBanner.jsx`'s default `image` prop pointed at
+   `/images/hero-temple.jpg`, a file that **does not exist on disk** — both Srivani pages render
+   this banner but never supplied their own `image`, so both silently 404'd (not a homepage-banner
+   fallback; the homepage uses a different file, `banner-bg.png`, entirely). Fixed by giving the
+   component a valid default and, more importantly, wiring an explicit, Srivani-specific
+   `image`/`imageAlt` (`/images/maha-dwaram.jpg` — the Tirumala gate associated with the VIP
+   break-darshan queue) into both pages' `hero={{...}}` objects, deliberately choosing an asset not
+   already used by the site's own `PromoPopup` (which uses `hero-temple-1.jpg` and fires on every
+   public page, Srivani pages included — using the same file there would have shown one photo
+   twice on screen at once).
+5. **Mobile-only sticky Call/WhatsApp bar.** New `components/layout/MobileContactBar.jsx`
+   (`sm:hidden`, matching the header's own existing mobile/not-mobile cutoff), rendered from
+   `SiteChrome.jsx` on every public page. Uses the site's existing `siteConfig.phone`/
+   `siteConfig.whatsapp` values (no new number), existing `PhoneIcon`/`WhatsAppIcon`, and the
+   already-established `green-600`/`secondary-500` Call/WhatsApp color pairing from
+   `PackageHeroBanner.jsx`. A small `h-16 sm:hidden` spacer after `<Footer>` in `SiteChrome.jsx`
+   keeps the fixed bar from covering the last row of footer content when scrolled to bottom.
+6. **Call/WhatsApp click tracking + Admin "Contact Clicks" report.** New table
+   `contact_click_events` (migration `20260822100000_phase8_1_contact_click_tracking.sql`,
+   applied to remote — `npx supabase migration list` confirms local == remote, all 16
+   migrations) with a single SELECT policy reusing `view_reports` (same "reuse an existing
+   permission" precedent as `error_logs` reusing `view_audit_logs` in Phase 8). All writes go
+   through a new `SECURITY DEFINER` function `record_contact_click()` — same
+   anon-write-via-narrow-RPC shape as `submit_enquiry()`, no direct INSERT grant to any role.
+   No `ip` column exists on the table at all, so the raw client IP can never be persisted even by
+   a future mistake; `app/api/contact-click/route.js` uses the IP only in-memory for a best-effort
+   `ip-api.com` lookup (country/region/city only, 2s timeout, swallowed on failure) before
+   discarding it. `lib/auth/parseUserAgent.js` gained a `deviceType` (`mobile`/`tablet`/`desktop`)
+   bucket, reused from the existing UA-parsing helper (no new dependency). Client-side, a new
+   `components/shared/TrackedContactLink.jsx` fires the tracking POST un-awaited and never calls
+   `preventDefault()`, so `tel:`/`wa.me` navigation is never delayed or gated by tracking
+   succeeding — used by the new mobile bar and swapped into every existing Call/WhatsApp anchor
+   site-wide (`Footer.jsx`, `ContactCTA.jsx`, `CityHero.jsx`, `PackageHeroBanner.jsx`) with no
+   visual/behavioral change otherwise. Admin view: `/admin/reports/contact-clicks` (added to the
+   existing Reports nav section, `view_reports` permission, no new permission key), built with the
+   existing `Table`/`Pagination`/`Badge`/`StatCard` UI primitives, filters via `searchParams`
+   (action/device/date-range), newest first.
+
+**Verification performed against real data, not just code inspection:** the RPC was called
+directly (anon key) — a row persisted correctly, then confirmed via the service-role key, then
+deleted; a second attempt with an invalid `action_type` was correctly rejected server-side; a
+direct anon `SELECT` against `contact_click_events` returned zero rows (RLS confirmed blocking
+public reads). The full real pipeline (browser click → `TrackedContactLink` → `/api/contact-click`
+→ UA parse → `record_contact_click()`) was exercised end-to-end from a running dev server — a
+WhatsApp click correctly recorded `action_type: "whatsapp"`, `page_path: "/"`, `device_type:
+"desktop"`, `os: "macOS"`, `browser: "Chrome"` (location was `null`, expected — `ip-api.com`
+cannot geolocate a local dev IP; the graceful-degradation path is what's actually being verified
+here) — then this test row was deleted too. Visually confirmed in a real browser: Homepage
+hero unchanged; `/about-us`'s `<h1>` no longer sits under the fixed header (`pt-16` applied,
+header measured at 88px); both Chennai and Hyderabad Srivani pages render a real, loading (non-404)
+banner image with correct alt text; the mobile sticky bar renders with correct `tel:`/`wa.me`
+hrefs and correct ARIA labels at a 390px viewport and is absent in the accessibility tree's normal
+desktop flow; `/admin/reports/contact-clicks` correctly redirects an unauthenticated request to
+`/admin/login` (existing middleware regression-checked, unmodified).
+
+**One verification boundary stated plainly:** the admin-only UI (inactivity warning modal,
+"Go to Website" link placement, the Contact Clicks report table/filters rendering with real rows
+under an authenticated `view_reports` session) was verified by code review, exact reuse of already
+-verified UI primitives (`Dialog`, `Button`, `Table`, `Pagination`, `StatCard`), and a successful
+production build — not by an authenticated real-browser session, since no admin test credentials
+were available in this pass and creating one was out of scope for a fix/enhancement pass.
+
+`npm run lint` and `npm run build` are clean. `npx supabase db push` applied the one new migration
+to remote with explicit go-ahead (schema-affecting; confirmed before running). Nothing pushed to
+`origin/master` yet — see Git section of the final report for this pass.
+
