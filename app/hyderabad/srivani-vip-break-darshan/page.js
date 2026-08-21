@@ -30,6 +30,8 @@ export default function HyderabadSrivaniPage() {
         whatsappMessage:
           "Hi, I'd like to know the price of the Srivani VIP Break Darshan package from Hyderabad.",
         sourceLabel: "hyderabad_srivani_vip_darshan",
+        image: "/images/maha-dwaram.jpg",
+        imageAlt: "Srivani VIP Break Darshan travel assistance from Hyderabad",
       }}
       serviceIntro={{
         heading: "Tirupati Travel Assistance from Hyderabad",

@@ -30,6 +30,8 @@ export default function ChennaiSrivaniPage() {
         whatsappMessage:
           "Hi, I'd like to know the price of the Srivani VIP Break Darshan package from Chennai.",
         sourceLabel: "chennai_srivani_vip_darshan",
+        image: "/images/maha-dwaram.jpg",
+        imageAlt: "Srivani VIP Break Darshan travel assistance from Chennai",
       }}
       serviceIntro={{
         heading: "Tirupati Travel Assistance from Chennai",

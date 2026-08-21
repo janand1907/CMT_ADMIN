@@ -5,8 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { siteConfig } from "@/config/site";
 import { HomeIcon, UsersIcon, PackageIcon, DocumentIcon, MegaphoneIcon, ChartBarIcon, UserIcon, SettingsIcon } from "@/components/icons";
 import { ProfileMenu } from "@/components/admin/ProfileMenu";
+import { useInactivityLogout } from "@/components/admin/useInactivityLogout";
+import { InactivityWarningModal } from "@/components/admin/InactivityWarningModal";
 
 // navConfig.js stores a string key (not a component) since sections cross
 // the server->client prop boundary in AdminNav.jsx — resolved here instead.
@@ -190,6 +193,14 @@ function Header({ onMobileMenuClick, userEmail, userRole, userName, logoutAction
         >
           How to Use
         </a>
+        <a
+          href={siteConfig.domain}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden text-sm font-medium text-gray-500 hover:text-gray-900 sm:block"
+        >
+          Go to Website
+        </a>
         <ProfileMenu userEmail={userEmail} userRole={userRole} userName={userName} logoutAction={logoutAction} />
       </div>
     </header>
@@ -226,6 +237,7 @@ export function AdminShell({ sections, userEmail, userRole, userName, logoutActi
     () => sections.find((s) => sectionIsActive(pathname, s))?.label ?? sections[0]?.label
   );
   useAuthStateRedirect();
+  const { showWarning, stayActive, signOutNow } = useInactivityLogout(logoutAction);
 
   // Current route is the source of truth for which group's permanent
   // submenu is shown (refresh, back/forward, direct URL) — hover never
@@ -246,6 +258,7 @@ export function AdminShell({ sections, userEmail, userRole, userName, logoutActi
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
+      <InactivityWarningModal open={showWarning} onStayActive={stayActive} onSignOut={signOutNow} />
       <Header
         onMobileMenuClick={() => setMobileOpen(true)}
         userEmail={userEmail}

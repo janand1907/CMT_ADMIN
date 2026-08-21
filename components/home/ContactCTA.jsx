@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
+import TrackedContactLink from "@/components/shared/TrackedContactLink";
 
 export default function ContactCTA({
   heading = "Ready to Plan Your Pilgrimage?",
@@ -15,31 +16,33 @@ export default function ContactCTA({
         <div className="mt-2 flex flex-wrap justify-center gap-3">
           {showCallButton ? (
             <>
-              <a
+              <TrackedContactLink
+                actionType="whatsapp"
                 href={`https://wa.me/${siteConfig.whatsapp}?text=${encodeURIComponent(whatsappMessage)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-whatsapp"
               >
                 Chat on WhatsApp
-              </a>
-              <a href={`tel:${siteConfig.phone}`} className="btn-primary">
+              </TrackedContactLink>
+              <TrackedContactLink actionType="call" href={`tel:${siteConfig.phone}`} className="btn-primary">
                 Call for Assistance
-              </a>
+              </TrackedContactLink>
             </>
           ) : (
             <>
               <Link href="/contact-us" className="btn-primary">
                 Contact Us
               </Link>
-              <a
+              <TrackedContactLink
+                actionType="whatsapp"
                 href={`https://wa.me/${siteConfig.whatsapp}?text=${encodeURIComponent(whatsappMessage)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-whatsapp"
               >
                 Chat on WhatsApp
-              </a>
+              </TrackedContactLink>
             </>
           )}
         </div>

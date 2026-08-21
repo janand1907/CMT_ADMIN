@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
+import TrackedContactLink from "@/components/shared/TrackedContactLink";
 
 export default function CityHero({ eyebrow, title, description, image, imageAlt, badges = [] }) {
   return (
@@ -17,14 +18,15 @@ export default function CityHero({ eyebrow, title, description, image, imageAlt,
             <a href="#enquiry" className="btn-primary">
               Enquire Now
             </a>
-            <a
+            <TrackedContactLink
+              actionType="whatsapp"
               href={`https://wa.me/${siteConfig.whatsapp}?text=${encodeURIComponent(siteConfig.whatsappDefaultMessage)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-whatsapp"
             >
               Chat on WhatsApp
-            </a>
+            </TrackedContactLink>
           </div>
 
           {badges.length > 0 && (

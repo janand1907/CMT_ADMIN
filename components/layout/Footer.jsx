@@ -10,6 +10,7 @@ import {
   ClockIcon,
   MapPinIcon,
 } from "@/components/icons";
+import TrackedContactLink from "@/components/shared/TrackedContactLink";
 
 // links: optional CMS "footer" menu, same fallback pattern as Navbar's `links`
 // prop. The bottom legal-links row (Privacy/Terms/Cancellation/Disclaimer) is
@@ -66,16 +67,18 @@ export default function Footer({ links }) {
           <ul className="mt-5 space-y-3 text-sm text-white/80">
             <li className="flex items-start gap-2.5">
               <PhoneIcon className="mt-0.5 h-4 w-4 shrink-0 text-white/50" />
-              <a
+              <TrackedContactLink
+                actionType="call"
                 href={`tel:${siteConfig.phone}`}
                 className="transition hover:text-white"
               >
                 {siteConfig.phoneDisplay}
-              </a>
+              </TrackedContactLink>
             </li>
             <li className="flex items-start gap-2.5">
               <WhatsAppIcon className="mt-0.5 h-4 w-4 shrink-0 text-white/50" />
-              <a
+              <TrackedContactLink
+                actionType="whatsapp"
                 href={`https://wa.me/${
                   siteConfig.whatsapp
                 }?text=${encodeURIComponent(
@@ -86,7 +89,7 @@ export default function Footer({ links }) {
                 className="transition hover:text-white"
               >
                 Chat with us
-              </a>
+              </TrackedContactLink>
             </li>
             <li className="flex items-start gap-2.5">
               <MailIcon className="mt-0.5 h-4 w-4 shrink-0 text-white/50" />

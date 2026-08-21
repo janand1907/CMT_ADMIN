@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { WhatsAppIcon, PhoneIcon, RouteIcon } from "@/components/icons";
 import { siteConfig } from "@/config/site";
+import TrackedContactLink from "@/components/shared/TrackedContactLink";
 import BalajiDarshanEnquiryForm from "./BalajiDarshanEnquiryForm";
 
 const trustPoints = ["Trusted by travellers", "Genuine Guidance", "Trip support till return drop"];
@@ -11,7 +12,7 @@ export default function PackageHeroBanner({
   pickupLabel,
   whatsappMessage,
   sourceLabel,
-  image = "/images/hero-temple.jpg",
+  image = "/images/maha-dwaram.jpg",
   imageAlt = "Sri Venkateswara Temple, Tirumala",
 }) {
   const pillBadges = [pickupLabel, "Stay Assistance", "Document Guidance", "Trip Coordination"];
@@ -68,7 +69,8 @@ export default function PackageHeroBanner({
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
-            <a
+            <TrackedContactLink
+              actionType="whatsapp"
               href={`https://wa.me/${siteConfig.whatsapp}?text=${encodeURIComponent(whatsappMessage)}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -76,14 +78,15 @@ export default function PackageHeroBanner({
             >
               <WhatsAppIcon className="h-5 w-5" />
               Check Package Price on WhatsApp
-            </a>
-            <a
+            </TrackedContactLink>
+            <TrackedContactLink
+              actionType="call"
               href={`tel:${siteConfig.phone}`}
               className="inline-flex items-center gap-2 rounded-full bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-green-700"
             >
               <PhoneIcon className="h-5 w-5" />
               Call Now
-            </a>
+            </TrackedContactLink>
             <a
               href="#package-details"
               className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-primary-900 shadow-soft transition hover:bg-neutral-50"
